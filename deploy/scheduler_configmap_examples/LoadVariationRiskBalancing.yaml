@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: "LoadVariationRiskBalancing"
+  namespace: "openshift-secondary-scheduler-operator"
+data:
+  "config.yaml": |
+    apiVersion: kubescheduler.config.k8s.io/v1beta1
+    kind: KubeSchedulerConfiguration
+    leaderElection:
+      leaderElect: false
+    profiles:
+      - schedulerName: secondary-scheduler
+        plugins:
+          score:
+            enabled:
+              - name: LoadVariationRiskBalancing
+        pluginConfig:
+          - name: LoadVariationRiskBalancing
+            args:
+              safeVarianceMargin: 1
+              safeVarianceSensitivity: 2
+              metricProvider:
+                type: Prometheus
+                address: ${PROM_URL}
+                token: ${PROM_TOKEN}
