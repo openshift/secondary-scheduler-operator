@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secondary-scheduler-operator
+  namespace: openshift-secondary-scheduler-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: secondary-scheduler-operator
+  template:
+    metadata:
+      labels:
+        name: secondary-scheduler-operator
+    spec:
+      containers:
+        - name: secondary-scheduler-operator
+          image: quay.io/openshift/secondary-scheduler-operator:4.9
+          ports:
+          - containerPort: 60000
+            name: metrics
+          command:
+          - secondary-scheduler-operator
+          args:
+          - "operator"
+          imagePullPolicy: Always
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: OPERATOR_NAME
+              value: "secondary-scheduler-operator"
+            - name: IMAGE
+              value: k8s.gcr.io/scheduler-plugins/kube-scheduler:v0.20.10
+      serviceAccountName: secondary-scheduler-operator
+      serviceAccount: secondary-scheduler-operator

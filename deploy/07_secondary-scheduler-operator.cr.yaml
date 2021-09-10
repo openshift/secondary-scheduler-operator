@@ -1,0 +1,8 @@
+apiVersion: operator.openshift.io/v1
+kind: SecondaryScheduler
+metadata:
+  name: secondary-scheduler
+  namespace: openshift-secondary-scheduler-operator
+spec:
+  managementState: Managed
+  schedulerConfig: customized
