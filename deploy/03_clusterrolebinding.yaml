@@ -1,7 +1,7 @@
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1beta1
 metadata:
-  name: secondary-scheduler-role-binding
+  name: secondary-scheduler-operator-role-binding
 subjects:
 - kind: ServiceAccount
   name: secondary-scheduler-operator
@@ -10,4 +10,17 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: secondary-scheduler-operator
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: secondary-scheduler-role-binding
+subjects:
+  - kind: ServiceAccount
+    name: secondary-scheduler-operator
+    namespace: openshift-secondary-scheduler-operator
+roleRef:
+  kind: ClusterRole
+  name: system:kube-scheduler
+  apiGroup: rbac.authorization.k8s.io
 

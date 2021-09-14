@@ -44,4 +44,5 @@ generate-clients:
 
 clean:
 	$(RM) ./secondary-scheduler-operator
+	$(RM) -r ./_tmp
 .PHONY: clean
