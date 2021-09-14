@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "secondary-scheduler"
+  namespace: "openshift-secondary-scheduler-operator"
+  labels:
+    app: "secondary-scheduler"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "secondary-scheduler"
+  template:
+    metadata:
+      labels:
+        app: "secondary-scheduler"
+    spec:
+      volumes:
+        - name: "etckubernetes"
+          configMap:
+            name: ${CONFIGMAP}
+      restartPolicy: "Always"
+      containers:
+        - name: "secondary-scheduler"
+          image: ${IMAGE}
+          resources:
+            limits:
+              cpu: "100m"
+              memory: "500Mi"
+            requests:
+              cpu: "100m"
+              memory: "500Mi"
+          args:
+            - /bin/kube-scheduler
+            - --config=/etc/kubernetes/config.yaml
+            - -v=2
+          volumeMounts:
+            - mountPath: "/etc/kubernetes"
+              name: "etckubernetes"
+      serviceAccountName: "secondary-scheduler"
+
