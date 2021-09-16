@@ -98,7 +98,7 @@ func (c TargetConfigReconciler) sync() error {
 	}
 
 	if _, _, err := c.manageServiceAccount(secondaryScheduler); err != nil {
-	 	return err
+		return err
 	}
 
 	if _, _, err := c.manageClusterRoleBinding(secondaryScheduler); err != nil {

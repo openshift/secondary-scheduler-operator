@@ -29,7 +29,7 @@ $(call build-image,ocp-secondary-scheduler-operator,$(IMAGE_REGISTRY)/ocp/4.9:se
 
 $(call verify-golang-versions,Dockerfile.rhel7)
 
-$(call add-crd-gen,secondaryscheduler,./pkg/apis/secondaryscheduler/v1,./manifests/4.8,./manifests/4.8)
+$(call add-crd-gen,secondaryscheduler,./pkg/apis/secondaryscheduler/v1,./manifests/4.9,./manifests/4.9)
 
 test-e2e: GO_TEST_PACKAGES :=./test/e2e
 test-e2e: test-unit

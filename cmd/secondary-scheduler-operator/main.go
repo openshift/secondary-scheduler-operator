@@ -30,4 +30,3 @@ func NewSecondarySchedulerOperatorCommand() *cobra.Command {
 	cmd.AddCommand(operator.NewOperator())
 	return cmd
 }
-
