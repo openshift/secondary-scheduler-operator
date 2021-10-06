@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: secondary-scheduler-operator
-          image: quay.io/openshift/secondary-scheduler-operator:4.9
+          image: secondaryscheduler/secondary-scheduler-operator:4.9
           ports:
           - containerPort: 60000
             name: metrics
