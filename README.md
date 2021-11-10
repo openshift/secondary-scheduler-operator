@@ -15,7 +15,7 @@ Simple Steps to Start
 ~ docker push quay.io/${QUAY_REGISTRY}/secondary-scheduler-operator:4.9
 ```
 
-3. Copy the `deploy` folder from the secondary-scheduler-operator repo to a temparory  folder.
+3. Copy the `deploy` folder from the secondary-scheduler-operator repo to a temporary  folder.
 ```
 ~ mkdir _tmp
 ~ cp -r ./deploy/*.yaml ./_tmp/
@@ -32,3 +32,14 @@ Simple Steps to Start
 ~ oc create -f _tmp
 ```
 
+## Deploying a custom scheduler
+To deploy a custom scheduler, you must build and host a container image for 
+your scheduler using the Kubernetes Scheduler Framework. You can then set the 
+image with the operator's `spec.SchedulerImage` field, like so:
+```
+$ oc edit secondaryschedulers/secondary scheduler
+...
+spec:
+  schedulerImage: quay.io/myuser/myscheduler:latest
+...
+```

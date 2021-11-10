@@ -47,7 +47,6 @@ var secondarySchedulerConfigMap = "secondary-scheduler"
 
 type TargetConfigReconciler struct {
 	ctx                      context.Context
-	targetImagePullSpec      string
 	operatorClient           operatorconfigclientv1.SecondaryschedulersV1Interface
 	secondarySchedulerClient *operatorclient.SecondarySchedulerClient
 	kubeClient               kubernetes.Interface
@@ -59,7 +58,6 @@ type TargetConfigReconciler struct {
 
 func NewTargetConfigReconciler(
 	ctx context.Context,
-	targetImagePullSpec string,
 	operatorConfigClient operatorconfigclientv1.SecondaryschedulersV1Interface,
 	operatorClientInformer operatorclientinformers.SecondarySchedulerInformer,
 	secondarySchedulerClient *operatorclient.SecondarySchedulerClient,
@@ -77,7 +75,6 @@ func NewTargetConfigReconciler(
 		dynamicClient:            dynamicClient,
 		eventRecorder:            eventRecorder,
 		queue:                    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "TargetConfigReconciler"),
-		targetImagePullSpec:      targetImagePullSpec,
 	}
 	operatorClientInformer.Informer().AddEventHandler(c.eventHandler())
 
@@ -178,7 +175,7 @@ func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondarys
 	}
 
 	images := map[string]string{
-		"${IMAGE}": c.targetImagePullSpec,
+		"${IMAGE}": secondaryScheduler.Spec.SchedulerImage,
 	}
 	for i := range required.Spec.Template.Spec.Containers {
 		for pat, img := range images {
