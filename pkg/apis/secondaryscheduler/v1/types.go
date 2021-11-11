@@ -30,6 +30,9 @@ type SecondarySchedulerSpec struct {
 
 	// Profiles sets which secondary scheduler strategy profiles are enabled
 	SchedulerConfig SecondarySchedulerConfig `json:"schedulerConfig"`
+
+	// SchedulerImage sets the container image url to be pulled for the custom scheduler that's deployed
+	SchedulerImage string `json:"imageSpec"`
 }
 
 // SecondarySchedulerProfile allows configuring the enabled strategy profiles for the secondary scheduler

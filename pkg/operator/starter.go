@@ -2,7 +2,6 @@ package operator
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -57,7 +56,6 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 
 	targetConfigReconciler := NewTargetConfigReconciler(
 		ctx,
-		os.Getenv("IMAGE"),
 		operatorConfigClient.SecondaryschedulersV1(),
 		operatorConfigInformers.Secondaryschedulers().V1().SecondarySchedulers(),
 		secondarySchedulerClient,
