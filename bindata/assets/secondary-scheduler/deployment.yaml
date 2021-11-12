@@ -33,7 +33,6 @@ spec:
           args:
             - /bin/kube-scheduler
             - --config=/etc/kubernetes/config.yaml
-            - -v=2
           volumeMounts:
             - mountPath: "/etc/kubernetes"
               name: "etckubernetes"
