@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: "secondary-scheduler-extra-resources"
+  namespace: "openshift-secondary-scheduler-operator"
+  labels:
+    app: "secondary-scheduler-extra-resources"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: "secondary-scheduler-extra-resources"
+  template:
+    metadata:
+      labels:
+        app: "secondary-scheduler-extra-resources"
+    spec:
+      restartPolicy: "Always"
+      containers:
+        - name: "secondary-scheduler-extra-resources"
+          image: ${IMAGE}
+          resources:
+            limits:
+              cpu: "100m"
+              memory: "500Mi"
+            requests:
+              cpu: "100m"
+              memory: "500Mi"
+          args:
+            - /bin/get-manifests
+      serviceAccountName: "secondary-scheduler"
