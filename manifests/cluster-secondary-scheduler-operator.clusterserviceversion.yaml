@@ -110,6 +110,12 @@ spec:
           verbs:
           - "*"
         - apiGroups:
+          - ""
+          resources:
+          - pods/log
+          verbs:
+          - "get,list"
+        - apiGroups:
           - rbac.authorization.k8s.io
           resources:
           - roles
