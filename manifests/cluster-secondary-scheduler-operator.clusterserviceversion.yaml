@@ -21,7 +21,7 @@ metadata:
         }
       ]
     certified: "false"
-    containerImage: quay.io/openshift/secondary-scheduler-operator:4.10
+    containerImage: registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-operator-rhel-8:latest
     createdAt: 2021/07/22
     olm.skipRange: ">=4.8.0 <4.10.0"
     description: An operator to run a secondary-scheduler in Openshift cluster.
