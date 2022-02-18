@@ -144,8 +144,8 @@ spec:
                 name: secondary-scheduler-operator
             spec:
               containers:
-                - name: descheduler-operator
-                  image: quay.io/openshift/secondary-scheduler-operator:4.10
+                - name: secondary-scheduler-operator
+                  image: registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-operator-rhel-8:latest
                   resources:
                     requests:
                       memory: 50Mi
@@ -164,9 +164,9 @@ spec:
                         fieldRef:
                           fieldPath: metadata.namespace
                     - name: OPERATOR_NAME
-                      value: "descheduler-operator"
+                      value: "secondary-scheduler-operator"
                     - name: IMAGE
-                      value: quay.io/openshift/origin-descheduler:4.8
+                      value: quay.io/openshift/origin-secondary-scheduler:4.10
               serviceAccountName: secondary-scheduler
               serviceAccount: openshift-secondary-scheduler-operator
     strategy: deployment
