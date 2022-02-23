@@ -23,7 +23,7 @@ metadata:
     certified: "false"
     containerImage: registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-operator-rhel-8:latest
     createdAt: 2021/07/22
-    olm.skipRange: ">=4.8.0 <4.10.0"
+    # olm.skipRange: ">=4.8.0 <4.10.0" # Comment this out when a next version is released and we need to skip versions
     description: An operator to run a secondary-scheduler in Openshift cluster.
     repository: https://github.com/openshift/secondary-scheduler-operator
     support: Red Hat, Inc.
