@@ -36,7 +36,7 @@ spec:
       description: SecondaryScheduler is the Schema for the secondaryschedulers API
       group: operator.openshift.io
       kind: SecondaryScheduler
-      name: Secondaryschedulers.operator.openshift.io
+      name: secondaryschedulers.operator.openshift.io
       version: v1
   description: |
       The Secondary Scheduler Operator provides the ability to a customized scheduler image developed using the scheduler plugin framework with customized configuration as a secondary scheduler in OpenShift.
