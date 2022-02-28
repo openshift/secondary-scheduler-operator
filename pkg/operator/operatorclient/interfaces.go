@@ -11,7 +11,7 @@ import (
 )
 
 const OperatorNamespace = "openshift-secondary-scheduler-operator"
-const OperatorConfigName = "secondary-scheduler"
+const OperatorConfigName = "cluster"
 
 type SecondarySchedulerClient struct {
 	Ctx            context.Context
