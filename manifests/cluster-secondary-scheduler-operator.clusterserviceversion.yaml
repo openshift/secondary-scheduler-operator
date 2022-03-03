@@ -115,16 +115,9 @@ spec:
           resources:
           - roles
           - rolebindings
+          - clusterrolebindings
           verbs:
           - '*'
-        - apiGroups:
-          - scheduling.k8s.io
-          resources:
-          - priorityclasses
-          verbs:
-          - get
-          - watch
-          - list
         - apiGroups:
           - apps
           resources:
