@@ -1,9 +1,8 @@
 FROM registry.ci.openshift.org/openshift/release:golang-1.16 AS builder
 WORKDIR /go/src/github.com/openshift/secondary-scheduler-operator
 COPY . .
-# image-references file is not recognized by OLM
-RUN rm manifests/4*/image-references
-RUN go build -o secondary-scheduler-operator ./cmd/secondary-scheduler-operator
+
+RUN make build
 
 FROM registry.ci.openshift.org/openshift/origin-v4.0:base
 COPY --from=builder /go/src/github.com/openshift/secondary-scheduler-operator/secondary-scheduler-operator /usr/bin/
