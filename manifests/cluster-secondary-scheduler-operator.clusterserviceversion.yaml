@@ -159,8 +159,6 @@ spec:
                           fieldPath: metadata.namespace
                     - name: OPERATOR_NAME
                       value: "secondary-scheduler-operator"
-                    - name: IMAGE
-                      value: quay.io/openshift/origin-secondary-scheduler:4.10
               serviceAccountName: secondary-scheduler
               serviceAccount: openshift-secondary-scheduler-operator
     strategy: deployment
