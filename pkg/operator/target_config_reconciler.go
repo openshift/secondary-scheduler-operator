@@ -45,6 +45,8 @@ const (
 // compatibility with 3.11
 var secondarySchedulerConfigMap = "secondary-scheduler"
 
+var resourceNotReady = fmt.Errorf("resource not ready")
+
 type TargetConfigReconciler struct {
 	ctx                      context.Context
 	operatorClient           operatorconfigclientv1.SecondaryschedulersV1Interface
@@ -94,11 +96,34 @@ func (c TargetConfigReconciler) sync() error {
 		return err
 	}
 
-	if _, _, err := c.manageServiceAccount(secondaryScheduler); err != nil {
+	serviceAccount, _, err := c.manageServiceAccount(secondaryScheduler)
+	if err != nil {
 		return err
 	}
 
+	var extraObjects []K8sObject
+	if secondaryScheduler.Spec.ExtraResources {
+		var err error
+		dp, _, err := c.manageExtraResourcesDeployment(secondaryScheduler, false)
+		if err != nil {
+			return err
+		}
+		_, _, err = v1helpers.UpdateStatus(c.secondarySchedulerClient, func(status *operatorv1.OperatorStatus) error {
+			resourcemerge.SetDeploymentGeneration(&status.Generations, dp)
+			return nil
+		})
+
+		extraObjects, err = c.manageExtraResourcesObjects(dp)
+		if err != nil {
+			return err
+		}
+	}
+
 	if _, _, err := c.manageClusterRoleBinding(secondaryScheduler); err != nil {
+		return err
+	}
+
+	if err := applyExtraObjects(c.kubeClient, c.eventRecorder, serviceAccount, extraObjects); err != nil {
 		return err
 	}
 
@@ -271,6 +296,10 @@ func (c *TargetConfigReconciler) processNextWorkItem() bool {
 
 	err := c.sync()
 	if err == nil {
+		if err == resourceNotReady {
+			c.queue.AddAfter(dsKey, 10*time.Second)
+			return true
+		}
 		c.queue.Forget(dsKey)
 		return true
 	}
