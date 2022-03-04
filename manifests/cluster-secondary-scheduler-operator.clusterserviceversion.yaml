@@ -50,7 +50,7 @@ spec:
 
       In addition to the profiles, the following parameters can be configured:
 
-      * `image` - Set the default operand image for the secondary scheduler.
+      * `imageSpec` - Set the default operand image for the secondary scheduler.
   displayName: Secondary Scheduler Operator
   keywords: ["secondary", "scheduling", "workload"]
   provider:
@@ -82,7 +82,7 @@ spec:
   install:
     spec:
       clusterPermissions:
-      - serviceAccountName: secondary-scheduler
+      - serviceAccountName: secondary-scheduler-operator
         rules:
         - apiGroups:
           - operator.openshift.io
@@ -159,6 +159,6 @@ spec:
                           fieldPath: metadata.namespace
                     - name: OPERATOR_NAME
                       value: "secondary-scheduler-operator"
-              serviceAccountName: secondary-scheduler
+              serviceAccountName: secondary-scheduler-operator
               serviceAccount: openshift-secondary-scheduler-operator
     strategy: deployment
