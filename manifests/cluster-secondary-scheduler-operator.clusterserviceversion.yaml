@@ -16,7 +16,7 @@ metadata:
           },
           "spec": {
             "managementState": "Managed",
-            "schedulerConfig": "customized"
+            "schedulerConfig": "secondary-scheduler-config"
           }
         }
       ]
@@ -50,7 +50,7 @@ spec:
 
       In addition to the profiles, the following parameters can be configured:
 
-      * `imageSpec` - Set the default operand image for the secondary scheduler.
+      * `schedulerImage` - Set the default operand image for the secondary scheduler.
   displayName: Secondary Scheduler Operator
   keywords: ["secondary", "scheduling", "workload"]
   provider:
