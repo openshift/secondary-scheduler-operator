@@ -35,10 +35,6 @@ spec:
           spec:
             description: spec holds user settable values for configuration
             properties:
-              imageSpec:
-                description: SchedulerImage sets the container image url to be pulled
-                  for the custom scheduler that's deployed
-                type: string
               logLevel:
                 default: Normal
                 description: "logLevel is an intent based logging for an overall component.
@@ -82,6 +78,10 @@ spec:
               schedulerConfig:
                 description: SchedulerConfig allows configuring the customized scheduler
                   plugin configuration for the secondaryscheduler.
+                type: string
+              schedulerImage:
+                description: SchedulerImage sets the container image url to be pulled
+                  for the custom scheduler that's deployed
                 type: string
               unsupportedConfigOverrides:
                 description: 'unsupportedConfigOverrides holds a sparse config that
