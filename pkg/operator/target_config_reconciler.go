@@ -98,7 +98,7 @@ func (c TargetConfigReconciler) sync() error {
 		return err
 	}
 
-	if _, _, err := c.manageClusterRoleBinding(secondaryScheduler); err != nil {
+	if _, _, err := c.manageClusterRoleBindings(secondaryScheduler); err != nil {
 		return err
 	}
 
@@ -146,8 +146,24 @@ func (c *TargetConfigReconciler) manageServiceAccount(secondaryScheduler *second
 	return resourceapply.ApplyServiceAccount(c.kubeClient.CoreV1(), c.eventRecorder, required)
 }
 
-func (c *TargetConfigReconciler) manageClusterRoleBinding(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (*rbacv1.ClusterRoleBinding, bool, error) {
-	required := resourceread.ReadClusterRoleBindingV1OrDie(bindata.MustAsset("assets/secondary-scheduler/clusterrolebinding.yaml"))
+func (c *TargetConfigReconciler) manageClusterRoleBindings(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (*rbacv1.ClusterRoleBinding, bool, error) {
+	required := resourceread.ReadClusterRoleBindingV1OrDie(bindata.MustAsset("assets/secondary-scheduler/clusterrolebinding-system-kube-scheduler.yaml"))
+	required.Namespace = secondaryScheduler.Namespace
+	required.OwnerReferences = []metav1.OwnerReference{
+		{
+			APIVersion: "v1",
+			Kind:       "SecondaryScheduler",
+			Name:       secondaryScheduler.Name,
+			UID:        secondaryScheduler.UID,
+		},
+	}
+
+	crb, modified, err := resourceapply.ApplyClusterRoleBinding(c.kubeClient.RbacV1(), c.eventRecorder, required)
+	if err != nil {
+		return crb, modified, err
+	}
+
+	required = resourceread.ReadClusterRoleBindingV1OrDie(bindata.MustAsset("assets/secondary-scheduler/clusterrolebinding-system-volume-scheduler.yaml"))
 	required.Namespace = secondaryScheduler.Namespace
 	required.OwnerReferences = []metav1.OwnerReference{
 		{
