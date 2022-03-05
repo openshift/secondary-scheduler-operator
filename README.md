@@ -9,9 +9,10 @@ The Secondary Scheduler Operator provides the ability to deploy a customized sch
 1. Build and push the operator image to a registry:
    ```sh
    export QUAY_USER=${your_quay_user_id}
-   podman build -t quay.io/${QUAY_USER}/secondary-scheduler-operator:4.11 .
+   export IMAGE_TAG=${your_image_tag}
+   podman build -t quay.io/${QUAY_USER}/secondary-scheduler-operator:${IMAGE_TAG} .
    podman login quay.io -u ${QUAY_USER}
-   podman push quay.io/${QUAY_USER}/secondary-scheduler-operator:4.11
+   podman push quay.io/${QUAY_USER}/secondary-scheduler-operator:${IMAGE_TAG}
    ```
 1. Update the image spec under `.spec.template.spec.containers[0].image` field in the `deploy/05_deployment.yaml` Deployment to point to the newly built image
 1. Update the `.spec.schedulerImage` field under `deploy/07_secondary-scheduler-operator.cr.yaml` CR to point to a secondary scheduler image
@@ -28,24 +29,24 @@ This process refers to building the operator in a way that it can be installed l
 1. Build and push the operator image to a registry:
    ```sh
    export QUAY_USER=${your_quay_user_id}
-   podman build -t quay.io/${QUAY_USER}/secondary-scheduler-operator:4.11 .
+   export IMAGE_TAG=${your_image_tag}
+   podman build -t quay.io/${QUAY_USER}/secondary-scheduler-operator:${IMAGE_TAG} .
    podman login quay.io -u ${QUAY_USER}
-   podman push quay.io/${QUAY_USER}/secondary-scheduler-operator:4.11
+   podman push quay.io/${QUAY_USER}/secondary-scheduler-operator:${IMAGE_TAG}
    ```
 
 1. Update the `.spec.install.spec.deployments[0].spec.template.spec.containers[0].image` field in the SSO CSV under `manifests/cluster-secondary-scheduler-operator.clusterserviceversion.yaml` to point to the newly built image.
 
 1. build and push the metadata image to a registry (e.g. https://quay.io):
    ```sh
-   podman build -t quay.io/${QUAY_USER}/secondary-scheduler-operator-metadata:4.11 -f Dockerfile.metadata .
-   podman login quay.io -u ${QUAY_USER}
-   podman push quay.io/${QUAY_USER}/secondary-scheduler-operator-metadata:4.11
+   podman build -t quay.io/${QUAY_USER}/secondary-scheduler-operator-metadata:${IMAGE_TAG} -f Dockerfile.metadata .
+   podman push quay.io/${QUAY_USER}/secondary-scheduler-operator-metadata:${IMAGE_TAG}
    ```
 
 1. build and push image index for operator-registry (pull and build https://github.com/operator-framework/operator-registry/ to get the `opm` binary)
    ```sh
-   opm index add --bundles quay.io/${QUAY_USER}/secondary-scheduler-operator-metadata:4.11 --tag quay.io/${QUAY_USER}/secondary-scheduler-operator-index:4.11
-   podman push quay.io/${QUAY_USER}/secondary-scheduler-operator-index:4.11
+   opm index add --bundles quay.io/${QUAY_USER}/secondary-scheduler-operator-metadata:${IMAGE_TAG} --tag quay.io/${QUAY_USER}/secondary-scheduler-operator-index:${IMAGE_TAG}
+   podman push quay.io/${QUAY_USER}/secondary-scheduler-operator-index:${IMAGE_TAG}
    ```
 
    Don't forget to increase the number of open files, .e.g. `ulimit -n 100000` in case the current limit is insufficient.
@@ -59,7 +60,7 @@ This process refers to building the operator in a way that it can be installed l
      namespace: openshift-marketplace
    spec:
      sourceType: grpc
-     image: quay.io/${QUAY_USER}/secondary-scheduler-operator-index:4.11
+     image: quay.io/${QUAY_USER}/secondary-scheduler-operator-index:${IMAGE_TAG}
    ```
 
 1. create `openshift-secondary-scheduler-operator` namespace:
