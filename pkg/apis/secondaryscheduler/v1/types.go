@@ -29,16 +29,11 @@ type SecondarySchedulerSpec struct {
 	operatorv1.OperatorSpec `json:",inline"`
 
 	// SchedulerConfig allows configuring the customized scheduler plugin configuration for the secondaryscheduler.
-	SchedulerConfig SecondarySchedulerConfig `json:"schedulerConfig"`
+	SchedulerConfig string `json:"schedulerConfig"`
 
 	// SchedulerImage sets the container image url to be pulled for the custom scheduler that's deployed
 	SchedulerImage string `json:"schedulerImage"`
 }
-
-// SecondarySchedulerProfile allows configuring the enabled strategy profiles for the secondary scheduler
-// it allows one profile to be enabled at once.
-// +kubebuilder:default=customized;
-type SecondarySchedulerConfig string
 
 // SecondarySchedulerStatus defines the observed state of SecondaryScheduler
 type SecondarySchedulerStatus struct {

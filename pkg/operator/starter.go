@@ -19,8 +19,14 @@ import (
 )
 
 const (
-	workQueueKey = "key"
+	workQueueKey          = "key"
+	workQueueCMChangedKey = "CMkey"
 )
+
+type queueItem struct {
+	kind string
+	name string
+}
 
 func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error {
 	kubeClient, err := kubernetes.NewForConfig(cc.ProtoKubeConfig)
@@ -58,6 +64,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		ctx,
 		operatorConfigClient.SecondaryschedulersV1(),
 		operatorConfigInformers.Secondaryschedulers().V1().SecondarySchedulers(),
+		kubeInformersForNamespaces,
 		secondarySchedulerClient,
 		kubeClient,
 		osrClient,
