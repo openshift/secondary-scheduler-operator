@@ -23,6 +23,9 @@ spec:
       containers:
         - name: "secondary-scheduler"
           image: ${IMAGE}
+          env:
+          - name: EnableOpenShiftAuth
+            value: true
           resources:
             limits:
               cpu: "100m"
