@@ -24,7 +24,7 @@ spec:
         - name: "secondary-scheduler"
           image: ${IMAGE}
           env:
-          - name: EnableOpenShiftAuth
+          - name: ENABLE_OPENSHIFT_AUTH
             value: true
           resources:
             limits:
