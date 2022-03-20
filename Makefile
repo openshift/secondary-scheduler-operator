@@ -32,6 +32,8 @@ $(call verify-golang-versions,Dockerfile.rhel7)
 $(call add-crd-gen,secondaryscheduler,./pkg/apis/secondaryscheduler/v1,./manifests/4.9,./manifests/4.9)
 
 test-e2e: GO_TEST_PACKAGES :=./test/e2e
+# the e2e imports pkg/cmd which has a data race in the transport library with the library-go init code
+test-e2e: GO_TEST_FLAGS :=-v
 test-e2e: test-unit
 .PHONY: test-e2e
 
