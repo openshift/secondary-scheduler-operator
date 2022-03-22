@@ -50,6 +50,7 @@ spec:
 
       In addition to the profiles, the following parameters can be configured:
 
+      * `schedulerConfig` - Set the configmap configuration for the secondary scheduler.
       * `schedulerImage` - Set the default operand image for the secondary scheduler.
   displayName: Secondary Scheduler Operator
   keywords: ["secondary", "scheduling", "workload"]
