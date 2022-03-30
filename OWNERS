@@ -1,16 +1,13 @@
 reviewers:
-  - ravisantoshgudimetla
-  - sttts
-  - damemi
-  - soltysh
   - ingvagabund
-  - wangchen615
-approvers:
   - mfojtik
   - ravisantoshgudimetla
-  - sttts
-  - damemi
   - soltysh
+  - wangchen615
+approvers:
   - ingvagabund
+  - mfojtik
+  - ravisantoshgudimetla
+  - soltysh
   - wangchen615
 component: "kube-scheduler"
