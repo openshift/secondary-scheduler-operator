@@ -24,7 +24,7 @@ metadata:
     containerImage: registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-operator-rhel-8:latest
     createdAt: 2021/07/22
     # olm.skipRange: ">=4.8.0 <4.10.0" # Comment this out when a next version is released and we need to skip versions
-    description: An operator to run a secondary-scheduler in Openshift cluster.
+    description: Runs a secondary scheduler in an OpenShift cluster.
     repository: https://github.com/openshift/secondary-scheduler-operator
     support: Red Hat, Inc.
     capabilities: Basic Install
@@ -34,24 +34,25 @@ spec:
   customresourcedefinitions:
     owned:
     - displayName: Secondary Scheduler
-      description: SecondaryScheduler is the Schema for the secondaryschedulers API
+      description: SecondaryScheduler is the schema for the secondaryschedulers API
       group: operator.openshift.io
       kind: SecondaryScheduler
       name: secondaryschedulers.operator.openshift.io
       version: v1
   description: |
-      The Secondary Scheduler Operator provides the ability to a customized scheduler image developed using the scheduler plugin framework with customized configuration as a secondary scheduler in OpenShift.
+      The Secondary Scheduler Operator provides the ability to use a customized scheduler image that was developed using the scheduler plugin framework as a secondary scheduler in OpenShift.
 
       ## Secondary Scheduler Configuration
 
-      Once the operator is installed, you can configure the plugins to run for your secondary scheduler.
+      Once the Secondary Scheduler Operator is installed, you can configure the plugins to run for your secondary scheduler.
 
-      The configuration of the secondary scheduler can be defined via a configmap that wraps the KubeSchedulerConfiguration yaml file in "config.yaml".
+      The configuration of the secondary scheduler is defined through a config map that wraps the KubeSchedulerConfiguration YAML file in "config.yaml".
+
       ## Additional Parameters
 
-      In addition to the profiles, the following parameters can be configured:
+      Additionally, the following parameters can be configured:
 
-      * `schedulerConfig` - Set the configmap configuration for the secondary scheduler.
+      * `schedulerConfig` - Set the config map configuration for the secondary scheduler.
       * `schedulerImage` - Set the default operand image for the secondary scheduler.
   displayName: Secondary Scheduler Operator
   keywords: ["secondary", "scheduling", "workload"]
