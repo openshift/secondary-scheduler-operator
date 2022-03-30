@@ -53,7 +53,7 @@ spec:
 
       * `schedulerConfig` - Set the config map configuration for the secondary scheduler.
       * `schedulerImage` - Set the default operand image for the secondary scheduler.
-  displayName: Secondary Scheduler Operator
+  displayName: Secondary Scheduler Operator for Red Hat OpenShift
   keywords: ["secondary", "scheduling", "workload"]
   provider:
     name: Red Hat, Inc.
