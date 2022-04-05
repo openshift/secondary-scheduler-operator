@@ -115,7 +115,7 @@ func TestMain(m *testing.M) {
 			return false, nil
 		}
 		for _, pod := range podItems.Items {
-			if !strings.HasPrefix(pod.Name, "cluster-") {
+			if !strings.HasPrefix(pod.Name, operatorclient.OperandName+"-") {
 				continue
 			}
 			klog.Infof("Checking pod: %v, phase: %v, deletionTS: %v\n", pod.Name, pod.Status.Phase, pod.GetDeletionTimestamp())

@@ -203,7 +203,7 @@ func (c *TargetConfigReconciler) manageClusterRoleBindings(secondaryScheduler *s
 
 func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler, forceDeployment bool) (*appsv1.Deployment, bool, error) {
 	required := resourceread.ReadDeploymentV1OrDie(bindata.MustAsset("assets/secondary-scheduler/deployment.yaml"))
-	required.Name = secondaryScheduler.Name
+	required.Name = operatorclient.OperandName
 	required.Namespace = secondaryScheduler.Namespace
 	required.OwnerReferences = []metav1.OwnerReference{
 		{
@@ -253,7 +253,7 @@ func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondarys
 	}
 
 	if !forceDeployment {
-		existingDeployment, err := c.kubeClient.AppsV1().Deployments(required.Namespace).Get(c.ctx, secondaryScheduler.Name, metav1.GetOptions{})
+		existingDeployment, err := c.kubeClient.AppsV1().Deployments(required.Namespace).Get(c.ctx, operatorclient.OperandName, metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				forceDeployment = true
