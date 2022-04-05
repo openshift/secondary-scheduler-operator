@@ -89,34 +89,20 @@ spec:
         - apiGroups:
           - operator.openshift.io
           resources:
-          - "*"
-          verbs:
-          - "*"
-        - apiGroups:
-          - secondaryschedulers.operator.openshift.io
-          resources:
-          - "*"
+          - secondaryschedulers
           verbs:
           - "*"
         - apiGroups:
           - ""
           resources:
-          - services
           - serviceaccounts
-          - pods
           - configmaps
-          - secrets
-          - namespaces
-          - nodes
-          - pods/eviction
           - events
           verbs:
           - "*"
         - apiGroups:
           - rbac.authorization.k8s.io
           resources:
-          - roles
-          - rolebindings
           - clusterrolebindings
           verbs:
           - '*'
@@ -124,7 +110,6 @@ spec:
           - apps
           resources:
           - deployments
-          - replicasets
           verbs:
           - "*"
       deployments:
