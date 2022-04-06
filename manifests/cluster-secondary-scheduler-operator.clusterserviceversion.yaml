@@ -90,6 +90,7 @@ spec:
           - operator.openshift.io
           resources:
           - secondaryschedulers
+          - secondaryschedulers/status
           verbs:
           - "*"
         - apiGroups:
