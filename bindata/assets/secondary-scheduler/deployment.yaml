@@ -15,6 +15,10 @@ spec:
       labels:
         app: "secondary-scheduler"
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
         - name: "etckubernetes"
           configMap:
@@ -22,6 +26,10 @@ spec:
       restartPolicy: "Always"
       containers:
         - name: "secondary-scheduler"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           image: ${IMAGE}
           env:
           - name: ENABLE_OPENSHIFT_AUTH

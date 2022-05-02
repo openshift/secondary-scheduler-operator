@@ -13,8 +13,16 @@ spec:
       labels:
         name: secondary-scheduler-operator
     spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: secondary-scheduler-operator
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
           image: quay.io/openshift/secondary-scheduler-operator:4.9
           ports:
           - containerPort: 60000
