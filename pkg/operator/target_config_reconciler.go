@@ -60,6 +60,7 @@ func NewTargetConfigReconciler(
 	ctx context.Context,
 	operatorConfigClient operatorconfigclientv1.SecondaryschedulersV1Interface,
 	operatorClientInformer operatorclientinformers.SecondarySchedulerInformer,
+	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces,
 	secondarySchedulerClient *operatorclient.SecondarySchedulerClient,
 	kubeClient kubernetes.Interface,
 	osrClient openshiftrouteclientset.Interface,
@@ -76,12 +77,33 @@ func NewTargetConfigReconciler(
 		eventRecorder:            eventRecorder,
 		queue:                    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "TargetConfigReconciler"),
 	}
-	operatorClientInformer.Informer().AddEventHandler(c.eventHandler())
+
+	operatorClientInformer.Informer().AddEventHandler(c.eventHandler(queueItem{kind: "secondaryscheduler"}))
+
+	kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {},
+		UpdateFunc: func(old, new interface{}) {
+			cm, ok := old.(*v1.ConfigMap)
+			if !ok {
+				klog.Errorf("Unable to convert obj to ConfigMap")
+				return
+			}
+			c.queue.Add(queueItem{kind: "configmap", name: cm.Name})
+		},
+		DeleteFunc: func(obj interface{}) {
+			cm, ok := obj.(*v1.ConfigMap)
+			if !ok {
+				klog.Errorf("Unable to convert obj to ConfigMap")
+				return
+			}
+			c.queue.Add(queueItem{kind: "configmap", name: cm.Name})
+		},
+	})
 
 	return c
 }
 
-func (c TargetConfigReconciler) sync() error {
+func (c TargetConfigReconciler) sync(item queueItem) error {
 	secondaryScheduler, err := c.operatorClient.SecondarySchedulers(operatorclient.OperatorNamespace).Get(c.ctx, operatorclient.OperatorConfigName, metav1.GetOptions{})
 	if err != nil {
 		klog.ErrorS(err, "unable to get operator configuration", "namespace", operatorclient.OperatorNamespace, "secondary-scheduler", operatorclient.OperatorConfigName)
@@ -89,16 +111,20 @@ func (c TargetConfigReconciler) sync() error {
 	}
 
 	forceDeployment := false
-	_, forceDeployment, err = c.manageConfigMap(secondaryScheduler)
-	if err != nil {
-		return err
+	// Skip any sync triggered by other than the SchedulerConfig CM changes
+	if item.kind == "configmap" {
+		if item.name != secondaryScheduler.Spec.SchedulerConfig {
+			return nil
+		}
+		klog.Infof("configmap %q changed, forcing redeployment", secondaryScheduler.Spec.SchedulerConfig)
+		forceDeployment = true
 	}
 
 	if _, _, err := c.manageServiceAccount(secondaryScheduler); err != nil {
 		return err
 	}
 
-	if _, _, err := c.manageClusterRoleBinding(secondaryScheduler); err != nil {
+	if _, _, err := c.manageClusterRoleBindings(secondaryScheduler); err != nil {
 		return err
 	}
 
@@ -146,9 +172,23 @@ func (c *TargetConfigReconciler) manageServiceAccount(secondaryScheduler *second
 	return resourceapply.ApplyServiceAccount(c.kubeClient.CoreV1(), c.eventRecorder, required)
 }
 
-func (c *TargetConfigReconciler) manageClusterRoleBinding(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (*rbacv1.ClusterRoleBinding, bool, error) {
-	required := resourceread.ReadClusterRoleBindingV1OrDie(bindata.MustAsset("assets/secondary-scheduler/clusterrolebinding.yaml"))
-	required.Namespace = secondaryScheduler.Namespace
+func (c *TargetConfigReconciler) manageClusterRoleBindings(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (*rbacv1.ClusterRoleBinding, bool, error) {
+	required := resourceread.ReadClusterRoleBindingV1OrDie(bindata.MustAsset("assets/secondary-scheduler/clusterrolebinding-system-kube-scheduler.yaml"))
+	required.OwnerReferences = []metav1.OwnerReference{
+		{
+			APIVersion: "v1",
+			Kind:       "SecondaryScheduler",
+			Name:       secondaryScheduler.Name,
+			UID:        secondaryScheduler.UID,
+		},
+	}
+
+	crb, modified, err := resourceapply.ApplyClusterRoleBinding(c.kubeClient.RbacV1(), c.eventRecorder, required)
+	if err != nil {
+		return crb, modified, err
+	}
+
+	required = resourceread.ReadClusterRoleBindingV1OrDie(bindata.MustAsset("assets/secondary-scheduler/clusterrolebinding-system-volume-scheduler.yaml"))
 	required.OwnerReferences = []metav1.OwnerReference{
 		{
 			APIVersion: "v1",
@@ -163,7 +203,7 @@ func (c *TargetConfigReconciler) manageClusterRoleBinding(secondaryScheduler *se
 
 func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler, forceDeployment bool) (*appsv1.Deployment, bool, error) {
 	required := resourceread.ReadDeploymentV1OrDie(bindata.MustAsset("assets/secondary-scheduler/deployment.yaml"))
-	required.Name = secondaryScheduler.Name
+	required.Name = operatorclient.OperandName
 	required.Namespace = secondaryScheduler.Namespace
 	required.OwnerReferences = []metav1.OwnerReference{
 		{
@@ -187,7 +227,7 @@ func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondarys
 	}
 
 	configmaps := map[string]string{
-		"${CONFIGMAP}": secondarySchedulerConfigMap,
+		"${CONFIGMAP}": secondaryScheduler.Spec.SchedulerConfig,
 	}
 
 	for i := range required.Spec.Template.Spec.Volumes {
@@ -213,7 +253,7 @@ func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondarys
 	}
 
 	if !forceDeployment {
-		existingDeployment, err := c.kubeClient.AppsV1().Deployments(required.Namespace).Get(c.ctx, secondaryScheduler.Name, metav1.GetOptions{})
+		existingDeployment, err := c.kubeClient.AppsV1().Deployments(required.Namespace).Get(c.ctx, operatorclient.OperandName, metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				forceDeployment = true
@@ -268,8 +308,8 @@ func (c *TargetConfigReconciler) processNextWorkItem() bool {
 		return false
 	}
 	defer c.queue.Done(dsKey)
-
-	err := c.sync()
+	item := dsKey.(queueItem)
+	err := c.sync(item)
 	if err == nil {
 		c.queue.Forget(dsKey)
 		return true
@@ -282,10 +322,10 @@ func (c *TargetConfigReconciler) processNextWorkItem() bool {
 }
 
 // eventHandler queues the operator to check spec and status
-func (c *TargetConfigReconciler) eventHandler() cache.ResourceEventHandler {
+func (c *TargetConfigReconciler) eventHandler(item queueItem) cache.ResourceEventHandler {
 	return cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(obj interface{}) { c.queue.Add(workQueueKey) },
-		UpdateFunc: func(old, new interface{}) { c.queue.Add(workQueueKey) },
-		DeleteFunc: func(obj interface{}) { c.queue.Add(workQueueKey) },
+		AddFunc:    func(obj interface{}) { c.queue.Add(item) },
+		UpdateFunc: func(old, new interface{}) { c.queue.Add(item) },
+		DeleteFunc: func(obj interface{}) { c.queue.Add(item) },
 	}
 }

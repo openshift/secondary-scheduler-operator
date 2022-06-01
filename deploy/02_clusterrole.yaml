@@ -1,39 +1,25 @@
 kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: secondary-scheduler-operator
 rules:
 - apiGroups:
   - operator.openshift.io
   resources:
-  - "*"
-  verbs:
-  - "*"
-- apiGroups:
-  - secondaryschedulers.operator.openshift.io
-  resources:
-  - "*"
+  - secondaryschedulers
   verbs:
   - "*"
 - apiGroups:
   - ""
   resources:
-  - services
   - serviceaccounts
-  - pods
   - configmaps
-  - secrets
-  - namespaces
-  - nodes
-  - pods/eviction
   - events
   verbs:
   - "*"
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
-  - roles
-  - rolebindings
   - clusterrolebindings
   verbs:
   - '*'
@@ -41,6 +27,5 @@ rules:
   - apps
   resources:
   - deployments
-  - replicasets
   verbs:
   - "*"

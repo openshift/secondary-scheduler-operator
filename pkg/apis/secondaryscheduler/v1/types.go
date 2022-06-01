@@ -7,7 +7,7 @@ import (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// SecondaryScheduler is the Schema for the deschedulers API
+// SecondaryScheduler is the Schema for the secondaryscheduler API
 // +k8s:openapi-gen=true
 // +genclient
 // +kubebuilder:storageversion
@@ -28,17 +28,12 @@ type SecondaryScheduler struct {
 type SecondarySchedulerSpec struct {
 	operatorv1.OperatorSpec `json:",inline"`
 
-	// Profiles sets which secondary scheduler strategy profiles are enabled
-	SchedulerConfig SecondarySchedulerConfig `json:"schedulerConfig"`
+	// SchedulerConfig allows configuring the customized scheduler plugin configuration for the secondaryscheduler.
+	SchedulerConfig string `json:"schedulerConfig"`
 
 	// SchedulerImage sets the container image url to be pulled for the custom scheduler that's deployed
-	SchedulerImage string `json:"imageSpec"`
+	SchedulerImage string `json:"schedulerImage"`
 }
-
-// SecondarySchedulerProfile allows configuring the enabled strategy profiles for the secondary scheduler
-// it allows one profile to be enabled at once.
-// +kubebuilder:default=customized;
-type SecondarySchedulerConfig string
 
 // SecondarySchedulerStatus defines the observed state of SecondaryScheduler
 type SecondarySchedulerStatus struct {

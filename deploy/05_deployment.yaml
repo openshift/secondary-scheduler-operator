@@ -31,7 +31,5 @@ spec:
                   fieldPath: metadata.namespace
             - name: OPERATOR_NAME
               value: "secondary-scheduler-operator"
-            - name: IMAGE
-              value: k8s.gcr.io/scheduler-plugins/kube-scheduler:v0.20.10
       serviceAccountName: secondary-scheduler-operator
       serviceAccount: secondary-scheduler-operator
