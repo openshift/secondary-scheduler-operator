@@ -125,8 +125,16 @@ spec:
               labels:
                 name: secondary-scheduler-operator
             spec:
+              securityContext:
+                runAsNonRoot: true
+                seccompProfile:
+                  type: RuntimeDefault
               containers:
                 - name: secondary-scheduler-operator
+                  securityContext:
+                    allowPrivilegeEscalation: false
+                    capabilities:
+                      drop: ["ALL"]
                   image: registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-operator-rhel-8:latest
                   resources:
                     requests:
