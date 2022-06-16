@@ -51,7 +51,7 @@ This process refers to building the operator in a way that it can be installed l
 
    Don't forget to increase the number of open files, .e.g. `ulimit -n 100000` in case the current limit is insufficient.
 
-1. create and apply catalogsource manifest:
+1. create and apply catalogsource manifest (notice to change <<QUAY_USER>> and <<IMAGE_TAG>> to your own values)::
    ```yaml
    apiVersion: operators.coreos.com/v1alpha1
    kind: CatalogSource
@@ -60,7 +60,7 @@ This process refers to building the operator in a way that it can be installed l
      namespace: openshift-marketplace
    spec:
      sourceType: grpc
-     image: quay.io/${QUAY_USER}/secondary-scheduler-operator-index:${IMAGE_TAG}
+     image: quay.io/<<QUAY_USER>>/cluster-kube-descheduler-operator-index:<<IMAGE_TAG>>
    ```
 
 1. create `openshift-secondary-scheduler-operator` namespace:
