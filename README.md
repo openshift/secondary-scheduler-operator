@@ -14,9 +14,13 @@ The Secondary Scheduler Operator provides the ability to deploy a customized sch
    podman login quay.io -u ${QUAY_USER}
    podman push quay.io/${QUAY_USER}/secondary-scheduler-operator:${IMAGE_TAG}
    ```
+
 1. Update the image spec under `.spec.template.spec.containers[0].image` field in the `deploy/05_deployment.yaml` Deployment to point to the newly built image
+
 1. Update the `.spec.schedulerImage` field under `deploy/07_secondary-scheduler-operator.cr.yaml` CR to point to a secondary scheduler image
+
 1. Update the `KubeSchedulerConfiguration` under `deploy/06_configmap.yaml` to configure available plugins
+
 1. Apply the manifests from `deploy` directory:
    ```sh
    oc apply -f deploy/
