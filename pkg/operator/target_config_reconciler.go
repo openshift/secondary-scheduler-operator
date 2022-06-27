@@ -19,6 +19,7 @@ import (
 	operatorclientinformers "github.com/openshift/secondary-scheduler-operator/pkg/generated/informers/externalversions/secondaryscheduler/v1"
 	"github.com/openshift/secondary-scheduler-operator/pkg/operator/operatorclient"
 
+	"github.com/openshift/library-go/pkg/controller"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -160,28 +161,32 @@ func (c *TargetConfigReconciler) manageConfigMap(secondaryScheduler *secondarysc
 func (c *TargetConfigReconciler) manageServiceAccount(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (*v1.ServiceAccount, bool, error) {
 	required := resourceread.ReadServiceAccountV1OrDie(bindata.MustAsset("assets/secondary-scheduler/serviceaccount.yaml"))
 	required.Namespace = secondaryScheduler.Namespace
-	required.OwnerReferences = []metav1.OwnerReference{
-		{
-			APIVersion: "v1",
-			Kind:       "SecondaryScheduler",
-			Name:       secondaryScheduler.Name,
-			UID:        secondaryScheduler.UID,
-		},
+	ownerReference := metav1.OwnerReference{
+		APIVersion: "operator.openshift.io/v1",
+		Kind:       "SecondaryScheduler",
+		Name:       secondaryScheduler.Name,
+		UID:        secondaryScheduler.UID,
 	}
+	required.OwnerReferences = []metav1.OwnerReference{
+		ownerReference,
+	}
+	controller.EnsureOwnerRef(required, ownerReference)
 
 	return resourceapply.ApplyServiceAccount(c.kubeClient.CoreV1(), c.eventRecorder, required)
 }
 
 func (c *TargetConfigReconciler) manageClusterRoleBindings(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (*rbacv1.ClusterRoleBinding, bool, error) {
 	required := resourceread.ReadClusterRoleBindingV1OrDie(bindata.MustAsset("assets/secondary-scheduler/clusterrolebinding-system-kube-scheduler.yaml"))
-	required.OwnerReferences = []metav1.OwnerReference{
-		{
-			APIVersion: "v1",
-			Kind:       "SecondaryScheduler",
-			Name:       secondaryScheduler.Name,
-			UID:        secondaryScheduler.UID,
-		},
+	ownerReference := metav1.OwnerReference{
+		APIVersion: "operator.openshift.io/v1",
+		Kind:       "SecondaryScheduler",
+		Name:       secondaryScheduler.Name,
+		UID:        secondaryScheduler.UID,
 	}
+	required.OwnerReferences = []metav1.OwnerReference{
+		ownerReference,
+	}
+	controller.EnsureOwnerRef(required, ownerReference)
 
 	crb, modified, err := resourceapply.ApplyClusterRoleBinding(c.kubeClient.RbacV1(), c.eventRecorder, required)
 	if err != nil {
@@ -189,14 +194,16 @@ func (c *TargetConfigReconciler) manageClusterRoleBindings(secondaryScheduler *s
 	}
 
 	required = resourceread.ReadClusterRoleBindingV1OrDie(bindata.MustAsset("assets/secondary-scheduler/clusterrolebinding-system-volume-scheduler.yaml"))
-	required.OwnerReferences = []metav1.OwnerReference{
-		{
-			APIVersion: "v1",
-			Kind:       "SecondaryScheduler",
-			Name:       secondaryScheduler.Name,
-			UID:        secondaryScheduler.UID,
-		},
+	ownerReference = metav1.OwnerReference{
+		APIVersion: "operator.openshift.io/v1",
+		Kind:       "SecondaryScheduler",
+		Name:       secondaryScheduler.Name,
+		UID:        secondaryScheduler.UID,
 	}
+	required.OwnerReferences = []metav1.OwnerReference{
+		ownerReference,
+	}
+	controller.EnsureOwnerRef(required, ownerReference)
 
 	return resourceapply.ApplyClusterRoleBinding(c.kubeClient.RbacV1(), c.eventRecorder, required)
 }
@@ -205,14 +212,16 @@ func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondarys
 	required := resourceread.ReadDeploymentV1OrDie(bindata.MustAsset("assets/secondary-scheduler/deployment.yaml"))
 	required.Name = operatorclient.OperandName
 	required.Namespace = secondaryScheduler.Namespace
-	required.OwnerReferences = []metav1.OwnerReference{
-		{
-			APIVersion: "v1",
-			Kind:       "SecondaryScheduler",
-			Name:       secondaryScheduler.Name,
-			UID:        secondaryScheduler.UID,
-		},
+	ownerReference := metav1.OwnerReference{
+		APIVersion: "operator.openshift.io/v1",
+		Kind:       "SecondaryScheduler",
+		Name:       secondaryScheduler.Name,
+		UID:        secondaryScheduler.UID,
 	}
+	required.OwnerReferences = []metav1.OwnerReference{
+		ownerReference,
+	}
+	controller.EnsureOwnerRef(required, ownerReference)
 
 	images := map[string]string{
 		"${IMAGE}": secondaryScheduler.Spec.SchedulerImage,
