@@ -22,7 +22,8 @@ metadata:
       ]
     certified: "false"
     containerImage: registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-operator-rhel-8:latest
-    createdAt: 2021/07/22
+    createdAt: 2022/06/15
+    olm.skipRange: ">=1.0.0 <1.1.0"
     description: Runs a secondary scheduler in an OpenShift cluster.
     repository: https://github.com/openshift/secondary-scheduler-operator
     support: Red Hat, Inc.
