@@ -285,11 +285,32 @@ func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondarys
 func deploymentChanged(existing, new *appsv1.Deployment) bool {
 	newArgs := sets.NewString(new.Spec.Template.Spec.Containers[0].Args...)
 	existingArgs := sets.NewString(existing.Spec.Template.Spec.Containers[0].Args...)
+
+	changed := false
+	if existing.Spec.Template.Spec.Containers[0].Image != new.Spec.Template.Spec.Containers[0].Image {
+		changed = true
+		klog.Infof("Container image in the deployment spec has changed")
+	}
+	if existing.Spec.Template.Spec.Volumes[0].VolumeSource.ConfigMap.LocalObjectReference.Name != new.Spec.Template.Spec.Volumes[0].VolumeSource.ConfigMap.LocalObjectReference.Name {
+		changed = true
+		klog.Infof("Container configmap volume source in the deployment spec has changed")
+	}
+	if !reflect.DeepEqual(existing.Spec.Template.Spec.SecurityContext, new.Spec.Template.Spec.SecurityContext) {
+		changed = true
+		klog.Infof("Securitycontext in the deployment spec has changed")
+	}
+	if !reflect.DeepEqual(existing.Spec.Template.Spec.Containers[0].SecurityContext, new.Spec.Template.Spec.Containers[0].SecurityContext) {
+		changed = true
+		klog.Infof("Container securitycontext in the deployment spec has changed")
+	}
+	if !reflect.DeepEqual(newArgs, existingArgs) {
+		changed = true
+		klog.Infof("Container arguments in the deployment spec has changed")
+	}
+
 	return existing.Name != new.Name ||
 		existing.Namespace != new.Namespace ||
-		existing.Spec.Template.Spec.Containers[0].Image != new.Spec.Template.Spec.Containers[0].Image ||
-		existing.Spec.Template.Spec.Volumes[0].VolumeSource.ConfigMap.LocalObjectReference.Name != new.Spec.Template.Spec.Volumes[0].VolumeSource.ConfigMap.LocalObjectReference.Name ||
-		!reflect.DeepEqual(newArgs, existingArgs)
+		changed
 }
 
 // Run starts the kube-scheduler and blocks until stopCh is closed.
