@@ -151,4 +151,4 @@ spec:
   schedulerImage: k8s.gcr.io/scheduler-plugins/kube-scheduler:v0.22.6
 ```
 
-The operator spec provides a `schedulerConfig` and a `schedulerImage` field, which allows users to specify a custom KubeSchedulerConfiguration and a custom scheduler image.
+The operator spec provides a `schedulerConfig` and a `schedulerImage` field, which allows users to specify a custom KubeSchedulerConfiguration and a custom scheduler image
