@@ -29,7 +29,7 @@ metadata:
     support: Red Hat, Inc.
     capabilities: Basic Install
     categories: OpenShift Optional
-    operators.openshift.io/valid-subscription: '["OpenShift Kubernetes Engine", "OpenShift Container Platform", "OpenShift Platform Plus"]'
+    operators.openshift.io/valid-subscription: '["OpenShift Container Platform", "OpenShift Platform Plus"]'
     # Prevent cluster upgrades to OpenShift Version 4.12 when this bundle is installed on the cluster.
     # 1.0.1 is the highest version that can still be installed in 4.11
     # while the pod security level is still not restricted by default.
