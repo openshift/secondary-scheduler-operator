@@ -29,7 +29,7 @@ metadata:
     support: Red Hat, Inc.
     capabilities: Basic Install
     categories: OpenShift Optional
-    operators.openshift.io/valid-subscription: '["OpenShift Kubernetes Engine", "OpenShift Container Platform", "OpenShift Platform Plus"]'
+    operators.openshift.io/valid-subscription: '["OpenShift Container Platform", "OpenShift Platform Plus"]'
 spec:
   customresourcedefinitions:
     owned:
