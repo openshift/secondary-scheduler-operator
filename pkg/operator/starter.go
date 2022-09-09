@@ -7,6 +7,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 
 	openshiftrouteclientset "github.com/openshift/client-go/route/clientset/versioned"
@@ -49,6 +50,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		return err
 	}
 	operatorConfigInformers := operatorclientinformers.NewSharedInformerFactory(operatorConfigClient, 10*time.Minute)
+	sharedInformerFactory := informers.NewSharedInformerFactory(kubeClient, 0)
 	secondarySchedulerClient := &operatorclient.SecondarySchedulerClient{
 		Ctx:            ctx,
 		SharedInformer: operatorConfigInformers.Secondaryschedulers().V1().SecondarySchedulers().Informer(),
@@ -70,6 +72,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		osrClient,
 		dynamicClient,
 		cc.EventRecorder,
+		sharedInformerFactory,
 	)
 
 	logLevelController := loglevel.NewClusterOperatorLoggingController(secondarySchedulerClient, cc.EventRecorder)

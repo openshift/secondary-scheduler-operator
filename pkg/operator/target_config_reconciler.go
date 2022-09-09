@@ -3,7 +3,7 @@ package operator
 import (
 	"context"
 	"fmt"
-	"reflect"
+	"strconv"
 	"time"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -17,18 +17,18 @@ import (
 	secondaryschedulersv1 "github.com/openshift/secondary-scheduler-operator/pkg/apis/secondaryscheduler/v1"
 	operatorconfigclientv1 "github.com/openshift/secondary-scheduler-operator/pkg/generated/clientset/versioned/typed/secondaryscheduler/v1"
 	operatorclientinformers "github.com/openshift/secondary-scheduler-operator/pkg/generated/informers/externalversions/secondaryscheduler/v1"
+
 	"github.com/openshift/secondary-scheduler-operator/pkg/operator/operatorclient"
 
 	"github.com/openshift/library-go/pkg/controller"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
@@ -55,6 +55,7 @@ type TargetConfigReconciler struct {
 	dynamicClient            dynamic.Interface
 	eventRecorder            events.Recorder
 	queue                    workqueue.RateLimitingInterface
+	sharedInformerFactory    informers.SharedInformerFactory
 }
 
 func NewTargetConfigReconciler(
@@ -67,6 +68,7 @@ func NewTargetConfigReconciler(
 	osrClient openshiftrouteclientset.Interface,
 	dynamicClient dynamic.Interface,
 	eventRecorder events.Recorder,
+	sharedInformerFactory informers.SharedInformerFactory,
 ) *TargetConfigReconciler {
 	c := &TargetConfigReconciler{
 		ctx:                      ctx,
@@ -77,6 +79,7 @@ func NewTargetConfigReconciler(
 		dynamicClient:            dynamicClient,
 		eventRecorder:            eventRecorder,
 		queue:                    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "TargetConfigReconciler"),
+		sharedInformerFactory:    sharedInformerFactory,
 	}
 
 	operatorClientInformer.Informer().AddEventHandler(c.eventHandler(queueItem{kind: "secondaryscheduler"}))
@@ -111,25 +114,46 @@ func (c TargetConfigReconciler) sync(item queueItem) error {
 		return err
 	}
 
-	forceDeployment := false
+	specAnnotations := map[string]string{
+		"secondaryschedulers.operator.openshift.io/cluster": strconv.FormatInt(secondaryScheduler.Generation, 10),
+	}
+
 	// Skip any sync triggered by other than the SchedulerConfig CM changes
 	if item.kind == "configmap" {
 		if item.name != secondaryScheduler.Spec.SchedulerConfig {
 			return nil
 		}
+		resourceVersion := "0"
+		configMapResourceVersion, err := c.getConfigMapResourceVersion(secondaryScheduler)
+		specAnnotations["configmaps/secondary-scheduler-config"] = configMapResourceVersion
+		if err != nil {
+			specAnnotations["configmaps/secondary-scheduler-config"] = resourceVersion
+			return err
+		}
 		klog.Infof("configmap %q changed, forcing redeployment", secondaryScheduler.Spec.SchedulerConfig)
-		forceDeployment = true
 	}
 
-	if _, _, err := c.manageServiceAccount(secondaryScheduler); err != nil {
+	if sa, _, err := c.manageServiceAccount(secondaryScheduler); err != nil {
 		return err
+	} else {
+		resourceVersion := "0"
+		if sa != nil { // SyncConfigMap can return nil
+			resourceVersion = sa.ObjectMeta.ResourceVersion
+		}
+		specAnnotations["serviceaccounts/secondary-scheduler"] = resourceVersion
 	}
 
-	if _, _, err := c.manageClusterRoleBindings(secondaryScheduler); err != nil {
+	if clusterRoleBindings, _, err := c.manageClusterRoleBindings(secondaryScheduler); err != nil {
 		return err
+	} else {
+		resourceVersion := "0"
+		if clusterRoleBindings != nil { // SyncConfigMap can return nil
+			resourceVersion = clusterRoleBindings.ObjectMeta.ResourceVersion
+		}
+		specAnnotations["clusterrolebindings/secondary-scheduler"] = resourceVersion
 	}
 
-	deployment, _, err := c.manageDeployment(secondaryScheduler, forceDeployment)
+	deployment, _, err := c.manageDeployment(secondaryScheduler, specAnnotations)
 	if err != nil {
 		return err
 	}
@@ -156,6 +180,15 @@ func (c *TargetConfigReconciler) manageConfigMap(secondaryScheduler *secondarysc
 	klog.Infof("Find ConfigMap %s for the secondaryscheduler.", secondaryScheduler.Spec.SchedulerConfig)
 
 	return resourceapply.ApplyConfigMap(c.kubeClient.CoreV1(), c.eventRecorder, required)
+}
+
+func (c *TargetConfigReconciler) getConfigMapResourceVersion(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (string, error) {
+	required, err := c.sharedInformerFactory.Core().V1().ConfigMaps().Lister().ConfigMaps(secondaryScheduler.Namespace).Get("secondary-scheduler-config")
+	if err != nil {
+		return "", fmt.Errorf("could not get configuration configmap: %v", err)
+	}
+
+	return required.ObjectMeta.ResourceVersion, nil
 }
 
 func (c *TargetConfigReconciler) manageServiceAccount(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (*v1.ServiceAccount, bool, error) {
@@ -208,7 +241,7 @@ func (c *TargetConfigReconciler) manageClusterRoleBindings(secondaryScheduler *s
 	return resourceapply.ApplyClusterRoleBinding(c.kubeClient.RbacV1(), c.eventRecorder, required)
 }
 
-func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler, forceDeployment bool) (*appsv1.Deployment, bool, error) {
+func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler, specAnnotations map[string]string) (*appsv1.Deployment, bool, error) {
 	required := resourceread.ReadDeploymentV1OrDie(bindata.MustAsset("assets/secondary-scheduler/deployment.yaml"))
 	required.Name = operatorclient.OperandName
 	required.Namespace = secondaryScheduler.Namespace
@@ -261,56 +294,13 @@ func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondarys
 		required.Spec.Template.Spec.Containers[0].Args = append(required.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", 2))
 	}
 
-	if !forceDeployment {
-		existingDeployment, err := c.kubeClient.AppsV1().Deployments(required.Namespace).Get(c.ctx, operatorclient.OperandName, metav1.GetOptions{})
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				forceDeployment = true
-			} else {
-				return nil, false, err
-			}
-		} else {
-			forceDeployment = deploymentChanged(existingDeployment, required)
-		}
-	}
-	// FIXME: this method will disappear in 4.6 so we need to fix this ASAP
-	return resourceapply.ApplyDeploymentWithForce(
+	resourcemerge.MergeMap(resourcemerge.BoolPtr(false), &required.Spec.Template.Annotations, specAnnotations)
+
+	return resourceapply.ApplyDeployment(
 		c.kubeClient.AppsV1(),
 		c.eventRecorder,
 		required,
-		resourcemerge.ExpectedDeploymentGeneration(required, secondaryScheduler.Status.Generations),
-		forceDeployment)
-}
-
-func deploymentChanged(existing, new *appsv1.Deployment) bool {
-	newArgs := sets.NewString(new.Spec.Template.Spec.Containers[0].Args...)
-	existingArgs := sets.NewString(existing.Spec.Template.Spec.Containers[0].Args...)
-
-	changed := false
-	if existing.Spec.Template.Spec.Containers[0].Image != new.Spec.Template.Spec.Containers[0].Image {
-		changed = true
-		klog.Infof("Container image in the deployment spec has changed")
-	}
-	if existing.Spec.Template.Spec.Volumes[0].VolumeSource.ConfigMap.LocalObjectReference.Name != new.Spec.Template.Spec.Volumes[0].VolumeSource.ConfigMap.LocalObjectReference.Name {
-		changed = true
-		klog.Infof("Container configmap volume source in the deployment spec has changed")
-	}
-	if !reflect.DeepEqual(existing.Spec.Template.Spec.SecurityContext, new.Spec.Template.Spec.SecurityContext) {
-		changed = true
-		klog.Infof("Securitycontext in the deployment spec has changed")
-	}
-	if !reflect.DeepEqual(existing.Spec.Template.Spec.Containers[0].SecurityContext, new.Spec.Template.Spec.Containers[0].SecurityContext) {
-		changed = true
-		klog.Infof("Container securitycontext in the deployment spec has changed")
-	}
-	if !reflect.DeepEqual(newArgs, existingArgs) {
-		changed = true
-		klog.Infof("Container arguments in the deployment spec has changed")
-	}
-
-	return existing.Name != new.Name ||
-		existing.Namespace != new.Namespace ||
-		changed
+		resourcemerge.ExpectedDeploymentGeneration(required, secondaryScheduler.Status.Generations))
 }
 
 // Run starts the kube-scheduler and blocks until stopCh is closed.
