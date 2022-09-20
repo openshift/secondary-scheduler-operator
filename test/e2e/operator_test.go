@@ -27,6 +27,7 @@ import (
 	ssscheme "github.com/openshift/secondary-scheduler-operator/pkg/generated/clientset/versioned/scheme"
 	"github.com/openshift/secondary-scheduler-operator/pkg/operator/operatorclient"
 	"github.com/openshift/secondary-scheduler-operator/test/e2e/bindata"
+	utilpointer "k8s.io/utils/pointer"
 )
 
 func TestMain(m *testing.M) {
@@ -146,8 +147,22 @@ func TestScheduling(t *testing.T) {
 			Labels:    map[string]string{"app": "test-secondary-scheduler-sheduling"},
 		},
 		Spec: corev1.PodSpec{
+			SecurityContext: &corev1.PodSecurityContext{
+				RunAsNonRoot: utilpointer.BoolPtr(true),
+				SeccompProfile: &corev1.SeccompProfile{
+					Type: corev1.SeccompProfileTypeRuntimeDefault,
+				},
+			},
 			SchedulerName: "secondary-scheduler",
 			Containers: []corev1.Container{{
+				SecurityContext: &corev1.SecurityContext{
+					AllowPrivilegeEscalation: utilpointer.BoolPtr(false),
+					Capabilities: &corev1.Capabilities{
+						Drop: []corev1.Capability{
+							"ALL",
+						},
+					},
+				},
 				Name:            "pause",
 				ImagePullPolicy: "Always",
 				Image:           "kubernetes/pause",
