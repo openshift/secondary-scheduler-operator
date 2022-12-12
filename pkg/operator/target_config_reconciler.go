@@ -125,9 +125,9 @@ func (c TargetConfigReconciler) sync(item queueItem) error {
 		}
 		resourceVersion := "0"
 		configMapResourceVersion, err := c.getConfigMapResourceVersion(secondaryScheduler)
-		specAnnotations["configmaps/secondary-scheduler-config"] = configMapResourceVersion
+		specAnnotations["configmaps/"+secondaryScheduler.Spec.SchedulerConfig] = configMapResourceVersion
 		if err != nil {
-			specAnnotations["configmaps/secondary-scheduler-config"] = resourceVersion
+			specAnnotations["configmaps/"+secondaryScheduler.Spec.SchedulerConfig] = resourceVersion
 			return err
 		}
 		klog.Infof("configmap %q changed, forcing redeployment", secondaryScheduler.Spec.SchedulerConfig)
@@ -183,7 +183,7 @@ func (c *TargetConfigReconciler) manageConfigMap(secondaryScheduler *secondarysc
 }
 
 func (c *TargetConfigReconciler) getConfigMapResourceVersion(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (string, error) {
-	required, err := c.sharedInformerFactory.Core().V1().ConfigMaps().Lister().ConfigMaps(secondaryScheduler.Namespace).Get("secondary-scheduler-config")
+	required, err := c.sharedInformerFactory.Core().V1().ConfigMaps().Lister().ConfigMaps(secondaryScheduler.Namespace).Get(secondaryScheduler.Spec.SchedulerConfig)
 	if err != nil {
 		return "", fmt.Errorf("could not get configuration configmap: %v", err)
 	}
