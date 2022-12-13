@@ -28,7 +28,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
@@ -47,15 +46,15 @@ const (
 var secondarySchedulerConfigMap = "secondary-scheduler"
 
 type TargetConfigReconciler struct {
-	ctx                      context.Context
-	operatorClient           operatorconfigclientv1.SecondaryschedulersV1Interface
-	secondarySchedulerClient *operatorclient.SecondarySchedulerClient
-	kubeClient               kubernetes.Interface
-	osrClient                openshiftrouteclientset.Interface
-	dynamicClient            dynamic.Interface
-	eventRecorder            events.Recorder
-	queue                    workqueue.RateLimitingInterface
-	sharedInformerFactory    informers.SharedInformerFactory
+	ctx                        context.Context
+	operatorClient             operatorconfigclientv1.SecondaryschedulersV1Interface
+	secondarySchedulerClient   *operatorclient.SecondarySchedulerClient
+	kubeClient                 kubernetes.Interface
+	osrClient                  openshiftrouteclientset.Interface
+	dynamicClient              dynamic.Interface
+	eventRecorder              events.Recorder
+	queue                      workqueue.RateLimitingInterface
+	kubeInformersForNamespaces v1helpers.KubeInformersForNamespaces
 }
 
 func NewTargetConfigReconciler(
@@ -68,18 +67,17 @@ func NewTargetConfigReconciler(
 	osrClient openshiftrouteclientset.Interface,
 	dynamicClient dynamic.Interface,
 	eventRecorder events.Recorder,
-	sharedInformerFactory informers.SharedInformerFactory,
 ) *TargetConfigReconciler {
 	c := &TargetConfigReconciler{
-		ctx:                      ctx,
-		operatorClient:           operatorConfigClient,
-		secondarySchedulerClient: secondarySchedulerClient,
-		kubeClient:               kubeClient,
-		osrClient:                osrClient,
-		dynamicClient:            dynamicClient,
-		eventRecorder:            eventRecorder,
-		queue:                    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "TargetConfigReconciler"),
-		sharedInformerFactory:    sharedInformerFactory,
+		ctx:                        ctx,
+		operatorClient:             operatorConfigClient,
+		secondarySchedulerClient:   secondarySchedulerClient,
+		kubeClient:                 kubeClient,
+		osrClient:                  osrClient,
+		dynamicClient:              dynamicClient,
+		eventRecorder:              eventRecorder,
+		queue:                      workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "TargetConfigReconciler"),
+		kubeInformersForNamespaces: kubeInformersForNamespaces,
 	}
 
 	operatorClientInformer.Informer().AddEventHandler(c.eventHandler(queueItem{kind: "secondaryscheduler"}))
@@ -123,15 +121,14 @@ func (c TargetConfigReconciler) sync(item queueItem) error {
 		if item.name != secondaryScheduler.Spec.SchedulerConfig {
 			return nil
 		}
-		resourceVersion := "0"
-		configMapResourceVersion, err := c.getConfigMapResourceVersion(secondaryScheduler)
-		specAnnotations["configmaps/"+secondaryScheduler.Spec.SchedulerConfig] = configMapResourceVersion
-		if err != nil {
-			specAnnotations["configmaps/"+secondaryScheduler.Spec.SchedulerConfig] = resourceVersion
-			return err
-		}
 		klog.Infof("configmap %q changed, forcing redeployment", secondaryScheduler.Spec.SchedulerConfig)
 	}
+
+	configMapResourceVersion, err := c.getConfigMapResourceVersion(secondaryScheduler)
+	if err != nil {
+		return err
+	}
+	specAnnotations["configmaps/"+secondaryScheduler.Spec.SchedulerConfig] = configMapResourceVersion
 
 	if sa, _, err := c.manageServiceAccount(secondaryScheduler); err != nil {
 		return err
@@ -183,7 +180,7 @@ func (c *TargetConfigReconciler) manageConfigMap(secondaryScheduler *secondarysc
 }
 
 func (c *TargetConfigReconciler) getConfigMapResourceVersion(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (string, error) {
-	required, err := c.sharedInformerFactory.Core().V1().ConfigMaps().Lister().ConfigMaps(secondaryScheduler.Namespace).Get(secondaryScheduler.Spec.SchedulerConfig)
+	required, err := c.kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Lister().ConfigMaps(operatorclient.OperatorNamespace).Get(secondaryScheduler.Spec.SchedulerConfig)
 	if err != nil {
 		return "", fmt.Errorf("could not get configuration configmap: %v", err)
 	}
