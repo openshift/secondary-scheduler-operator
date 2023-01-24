@@ -22,7 +22,6 @@ import (
 	"github.com/openshift/library-go/pkg/operator/resource/resourceread"
 
 	ssv1 "github.com/openshift/secondary-scheduler-operator/pkg/apis/secondaryscheduler/v1"
-	"github.com/openshift/secondary-scheduler-operator/pkg/cmd/operator"
 	ssclient "github.com/openshift/secondary-scheduler-operator/pkg/generated/clientset/versioned"
 	ssscheme "github.com/openshift/secondary-scheduler-operator/pkg/generated/clientset/versioned/scheme"
 	"github.com/openshift/secondary-scheduler-operator/pkg/operator/operatorclient"
@@ -36,6 +35,16 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	if os.Getenv("IMAGE_FORMAT") == "" {
+		klog.Errorf("IMAGE_FORMAT environment variable not set")
+		os.Exit(1)
+	}
+
+	if os.Getenv("NAMESPACE") == "" {
+		klog.Errorf("NAMESPACE environment variable not set")
+		os.Exit(1)
+	}
+
 	kubeClient := getKubeClientOrDie()
 	apiExtClient := getApiExtensionKubeClient()
 	ssClient := getSecondarySchedulerClient()
@@ -45,42 +54,109 @@ func TestMain(m *testing.M) {
 	ctx, cancelFnc := context.WithCancel(context.TODO())
 	defer cancelFnc()
 
+	assets := []struct {
+		path           string
+		readerAndApply func(objBytes []byte) error
+	}{
+		{
+			path: "assets/00_secondary-scheduler-operator.crd.yaml",
+			readerAndApply: func(objBytes []byte) error {
+				_, _, err := resourceapply.ApplyCustomResourceDefinitionV1(apiExtClient.ApiextensionsV1(), eventRecorder, resourceread.ReadCustomResourceDefinitionV1OrDie(objBytes))
+				return err
+			},
+		},
+		{
+			path: "assets/01_namespace.yaml",
+			readerAndApply: func(objBytes []byte) error {
+				_, _, err := resourceapply.ApplyNamespace(kubeClient.CoreV1(), eventRecorder, resourceread.ReadNamespaceV1OrDie(objBytes))
+				return err
+			},
+		},
+		{
+			path: "assets/02_serviceaccount.yaml",
+			readerAndApply: func(objBytes []byte) error {
+				_, _, err := resourceapply.ApplyServiceAccount(kubeClient.CoreV1(), eventRecorder, resourceread.ReadServiceAccountV1OrDie(objBytes))
+				return err
+			},
+		},
+		{
+			path: "assets/03_clusterrole.yaml",
+			readerAndApply: func(objBytes []byte) error {
+				_, _, err := resourceapply.ApplyClusterRole(kubeClient.RbacV1(), eventRecorder, resourceread.ReadClusterRoleV1OrDie(objBytes))
+				return err
+			},
+		},
+		{
+			path: "assets/04_clusterrolebinding.yaml",
+			readerAndApply: func(objBytes []byte) error {
+				_, _, err := resourceapply.ApplyClusterRoleBinding(kubeClient.RbacV1(), eventRecorder, resourceread.ReadClusterRoleBindingV1OrDie(objBytes))
+				return err
+			},
+		},
+		{
+			path: "assets/04_kube-scheduler-cluster-role-binding.yaml",
+			readerAndApply: func(objBytes []byte) error {
+				_, _, err := resourceapply.ApplyClusterRoleBinding(kubeClient.RbacV1(), eventRecorder, resourceread.ReadClusterRoleBindingV1OrDie(objBytes))
+				return err
+			},
+		},
+		{
+			path: "assets/04_volume-scheduler-cluster-role-binding.yaml",
+			readerAndApply: func(objBytes []byte) error {
+				_, _, err := resourceapply.ApplyClusterRoleBinding(kubeClient.RbacV1(), eventRecorder, resourceread.ReadClusterRoleBindingV1OrDie(objBytes))
+				return err
+			},
+		},
+		{
+			path: "assets/05_deployment.yaml",
+			readerAndApply: func(objBytes []byte) error {
+				required := resourceread.ReadDeploymentV1OrDie(objBytes)
+				// override the operator image with the one built in the CI
+
+				// E.g. IMAGE_FORMAT=registry.build03.ci.openshift.org/ci-op-52fj47p4/stable:${component}
+				registry := strings.Split(os.Getenv("IMAGE_FORMAT"), "/")[0]
+
+				required.Spec.Template.Spec.Containers[0].Image = registry + "/" + os.Getenv("NAMESPACE") + "/pipeline:secondary-scheduler-operator"
+				_, _, err := resourceapply.ApplyDeployment(
+					kubeClient.AppsV1(),
+					eventRecorder,
+					required,
+					1000, // any random high number
+				)
+				return err
+			},
+		},
+		{
+			path: "assets/06_configmap.yaml",
+			readerAndApply: func(objBytes []byte) error {
+				_, _, err := resourceapply.ApplyConfigMap(kubeClient.CoreV1(), eventRecorder, resourceread.ReadConfigMapV1OrDie(objBytes))
+				return err
+			},
+		},
+		{
+			path: "assets/07_secondary-scheduler-operator.cr.yaml",
+			readerAndApply: func(objBytes []byte) error {
+				requiredObj, err := runtime.Decode(ssscheme.Codecs.UniversalDecoder(ssv1.SchemeGroupVersion), objBytes)
+				if err != nil {
+					klog.Errorf("Unable to decode assets/07_secondary-scheduler-operator.cr.yaml: %v", err)
+					return err
+				}
+				requiredSS := requiredObj.(*ssv1.SecondaryScheduler)
+
+				_, err = ssClient.SecondaryschedulersV1().SecondarySchedulers(requiredSS.Namespace).Create(ctx, requiredSS, metav1.CreateOptions{})
+				return err
+			},
+		},
+	}
+
 	// create required resources, e.g. namespace, crd, roles
 	if err := wait.PollImmediate(1*time.Second, 10*time.Second, func() (bool, error) {
-		klog.Infof("Creating assets/00_secondary-scheduler-operator.crd.yaml")
-		requiredCRD := resourceread.ReadCustomResourceDefinitionV1OrDie(bindata.MustAsset("assets/00_secondary-scheduler-operator.crd.yaml"))
-		if _, _, err := resourceapply.ApplyCustomResourceDefinitionV1(apiExtClient.ApiextensionsV1(), eventRecorder, requiredCRD); err != nil {
-			klog.Errorf("Unable to create assets/00_secondary-scheduler-operator.crd.yaml: %v", err)
-			return false, nil
-		}
-
-		klog.Infof("Creating assets/01_namespace.yaml")
-		requiredNS := resourceread.ReadNamespaceV1OrDie(bindata.MustAsset("assets/01_namespace.yaml"))
-		if _, _, err := resourceapply.ApplyNamespace(kubeClient.CoreV1(), eventRecorder, requiredNS); err != nil {
-			klog.Errorf("Unable to create assets/01_namespace.yaml: %v", err)
-			return false, nil
-		}
-
-		klog.Infof("Creating assets/assets/06_configmap.yaml")
-		requiredCM := resourceread.ReadConfigMapV1OrDie(bindata.MustAsset("assets/06_configmap.yaml"))
-		if _, _, err := resourceapply.ApplyConfigMap(kubeClient.CoreV1(), eventRecorder, requiredCM); err != nil {
-			klog.Errorf("Unable to create assets/06_configmap.yaml: %v", err)
-			return false, nil
-		}
-
-		klog.Infof("Creating assets/07_secondary-scheduler-operator.cr.yaml")
-		bytesData := bindata.MustAsset("assets/07_secondary-scheduler-operator.cr.yaml")
-		requiredObj, err := runtime.Decode(ssscheme.Codecs.UniversalDecoder(ssv1.SchemeGroupVersion), bytesData)
-		if err != nil {
-			klog.Errorf("Unable to decode assets/07_secondary-scheduler-operator.cr.yaml: %v", err)
-			return false, err
-		}
-		requiredSS := requiredObj.(*ssv1.SecondaryScheduler)
-
-		_, err = ssClient.SecondaryschedulersV1().SecondarySchedulers(requiredSS.Namespace).Create(ctx, requiredSS, metav1.CreateOptions{})
-		if err != nil {
-			klog.Errorf("Unable to create secondaryscheduler CR: %v", err)
-			return false, nil
+		for _, asset := range assets {
+			klog.Infof("Creating %v", asset.path)
+			if err := asset.readerAndApply(bindata.MustAsset(asset.path)); err != nil {
+				klog.Errorf("Unable to create %v: %v", asset.path, err)
+				return false, nil
+			}
 		}
 
 		return true, nil
@@ -88,23 +164,6 @@ func TestMain(m *testing.M) {
 		klog.Errorf("Unable to create SSO resources: %v", err)
 		os.Exit(1)
 	}
-
-	operatorCmd := operator.NewOperator()
-	// TODO(jchaloup): disable the leader election mechanism
-	// TODO(jchaloup): redirect the SSO logs into a file?
-	operatorCmd.SetArgs([]string{
-		"--kubeconfig", os.Getenv("KUBECONFIG"),
-		"--namespace", operatorclient.OperatorNamespace,
-	})
-
-	go func() {
-		if err := operatorCmd.ExecuteContext(ctx); err != nil {
-			klog.Errorf("operated executed with error: %v", err)
-		}
-		os.Exit(1)
-	}()
-
-	time.Sleep(5 * time.Second)
 
 	var secondarySchedulerPod *corev1.Pod
 	// Wait until the secondary scheduler pod is running
@@ -185,7 +244,7 @@ func TestScheduling(t *testing.T) {
 		})
 	}()
 
-	if err := wait.PollImmediate(1*time.Second, 10*time.Second, func() (bool, error) {
+	if err := wait.PollImmediate(1*time.Second, time.Minute, func() (bool, error) {
 		klog.Infof("Listing pods...")
 		pod, err := kubeClient.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 		if err != nil {
@@ -197,6 +256,7 @@ func TestScheduling(t *testing.T) {
 			return false, nil
 		}
 		klog.Infof("Pod successfully assigned to a node: %v", pod.Spec.NodeName)
+
 		return true, nil
 	}); err != nil {
 		t.Fatalf("Unable to wait for a scheduled pod: %v", err)
