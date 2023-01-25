@@ -114,6 +114,16 @@ spec:
           - deployments
           verbs:
           - "*"
+        - apiGroups:
+          - coordination.k8s.io
+          resources:
+          - leases
+          verbs:
+          - get
+          - watch
+          - list
+          - create
+          - update
       deployments:
       - name: secondary-scheduler-operator
         spec:

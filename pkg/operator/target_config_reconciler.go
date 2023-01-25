@@ -155,7 +155,7 @@ func (c TargetConfigReconciler) sync(item queueItem) error {
 		return err
 	}
 
-	_, _, err = v1helpers.UpdateStatus(c.secondarySchedulerClient, func(status *operatorv1.OperatorStatus) error {
+	_, _, err = v1helpers.UpdateStatus(c.ctx, c.secondarySchedulerClient, func(status *operatorv1.OperatorStatus) error {
 		resourcemerge.SetDeploymentGeneration(&status.Generations, deployment)
 		return nil
 	})
@@ -176,7 +176,7 @@ func (c *TargetConfigReconciler) manageConfigMap(secondaryScheduler *secondarysc
 	secondarySchedulerConfigMap = string(secondaryScheduler.Spec.SchedulerConfig)
 	klog.Infof("Find ConfigMap %s for the secondaryscheduler.", secondaryScheduler.Spec.SchedulerConfig)
 
-	return resourceapply.ApplyConfigMap(c.kubeClient.CoreV1(), c.eventRecorder, required)
+	return resourceapply.ApplyConfigMap(c.ctx, c.kubeClient.CoreV1(), c.eventRecorder, required)
 }
 
 func (c *TargetConfigReconciler) getConfigMapResourceVersion(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (string, error) {
@@ -202,7 +202,7 @@ func (c *TargetConfigReconciler) manageServiceAccount(secondaryScheduler *second
 	}
 	controller.EnsureOwnerRef(required, ownerReference)
 
-	return resourceapply.ApplyServiceAccount(c.kubeClient.CoreV1(), c.eventRecorder, required)
+	return resourceapply.ApplyServiceAccount(c.ctx, c.kubeClient.CoreV1(), c.eventRecorder, required)
 }
 
 func (c *TargetConfigReconciler) manageClusterRoleBindings(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (*rbacv1.ClusterRoleBinding, bool, error) {
@@ -218,7 +218,7 @@ func (c *TargetConfigReconciler) manageClusterRoleBindings(secondaryScheduler *s
 	}
 	controller.EnsureOwnerRef(required, ownerReference)
 
-	crb, modified, err := resourceapply.ApplyClusterRoleBinding(c.kubeClient.RbacV1(), c.eventRecorder, required)
+	crb, modified, err := resourceapply.ApplyClusterRoleBinding(c.ctx, c.kubeClient.RbacV1(), c.eventRecorder, required)
 	if err != nil {
 		return crb, modified, err
 	}
@@ -235,7 +235,7 @@ func (c *TargetConfigReconciler) manageClusterRoleBindings(secondaryScheduler *s
 	}
 	controller.EnsureOwnerRef(required, ownerReference)
 
-	return resourceapply.ApplyClusterRoleBinding(c.kubeClient.RbacV1(), c.eventRecorder, required)
+	return resourceapply.ApplyClusterRoleBinding(c.ctx, c.kubeClient.RbacV1(), c.eventRecorder, required)
 }
 
 func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler, specAnnotations map[string]string) (*appsv1.Deployment, bool, error) {
@@ -294,6 +294,7 @@ func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondarys
 	resourcemerge.MergeMap(resourcemerge.BoolPtr(false), &required.Spec.Template.Annotations, specAnnotations)
 
 	return resourceapply.ApplyDeployment(
+		c.ctx,
 		c.kubeClient.AppsV1(),
 		c.eventRecorder,
 		required,

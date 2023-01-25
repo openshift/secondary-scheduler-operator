@@ -21,12 +21,13 @@ func (AggregatorConfig) SwaggerDoc() map[string]string {
 }
 
 var map_KubeAPIServerConfig = map[string]string{
+	"":                             "Compatibility level 4: No compatibility is provided, the API can change at any point for any reason. These capabilities should not be used by applications needing long term support.",
 	"authConfig":                   "authConfig configures authentication options in addition to the standard oauth token and client certificate authenticators",
 	"aggregatorConfig":             "aggregatorConfig has options for configuring the aggregator component of the API server.",
 	"kubeletClientInfo":            "kubeletClientInfo contains information about how to connect to kubelets",
 	"servicesSubnet":               "servicesSubnet is the subnet to use for assigning service IPs",
 	"servicesNodePortRange":        "servicesNodePortRange is the range to use for assigning service public ports on a host.",
-	"consolePublicURL":             "consolePublicURL is an optional URL to provide a redirect from the kube-apiserver to the webconsole",
+	"consolePublicURL":             "DEPRECATED: consolePublicURL has been deprecated and setting it has no effect.",
 	"userAgentMatchingConfig":      "UserAgentMatchingConfig controls how API calls from *voluntarily* identifying clients will be handled.  THIS DOES NOT DEFEND AGAINST MALICIOUS CLIENTS!",
 	"imagePolicyConfig":            "imagePolicyConfig feeds the image policy admission plugin",
 	"projectConfig":                "projectConfig feeds an admission plugin",
@@ -56,6 +57,7 @@ func (KubeAPIServerProjectConfig) SwaggerDoc() map[string]string {
 }
 
 var map_KubeControllerManagerConfig = map[string]string{
+	"":                   "Compatibility level 4: No compatibility is provided, the API can change at any point for any reason. These capabilities should not be used by applications needing long term support.",
 	"serviceServingCert": "serviceServingCert provides support for the old alpha service serving cert signer CA bundle",
 	"projectConfig":      "projectConfig is an optimization for the daemonset controller",
 	"extendedArguments":  "extendedArguments is used to configure the kube-controller-manager",
@@ -85,7 +87,7 @@ func (KubeletConnectionInfo) SwaggerDoc() map[string]string {
 
 var map_MasterAuthConfig = map[string]string{
 	"":                           "MasterAuthConfig configures authentication options in addition to the standard oauth token and client certificate authenticators",
-	"requestHeader":              "requestHeader holds options for setting up a front proxy against the the API.  It is optional.",
+	"requestHeader":              "requestHeader holds options for setting up a front proxy against the API.  It is optional.",
 	"webhookTokenAuthenticators": "webhookTokenAuthenticators, if present configures remote token reviewers",
 	"oauthMetadataFile":          "oauthMetadataFile is a path to a file containing the discovery endpoint for OAuth 2.0 Authorization Server Metadata for an external OAuth server. See IETF Draft: // https://tools.ietf.org/html/draft-ietf-oauth-discovery-04#section-2 This option is mutually exclusive with OAuthConfig",
 }

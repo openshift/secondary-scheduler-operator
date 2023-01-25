@@ -61,49 +61,49 @@ func TestMain(m *testing.M) {
 		{
 			path: "assets/00_secondary-scheduler-operator.crd.yaml",
 			readerAndApply: func(objBytes []byte) error {
-				_, _, err := resourceapply.ApplyCustomResourceDefinitionV1(apiExtClient.ApiextensionsV1(), eventRecorder, resourceread.ReadCustomResourceDefinitionV1OrDie(objBytes))
+				_, _, err := resourceapply.ApplyCustomResourceDefinitionV1(ctx, apiExtClient.ApiextensionsV1(), eventRecorder, resourceread.ReadCustomResourceDefinitionV1OrDie(objBytes))
 				return err
 			},
 		},
 		{
 			path: "assets/01_namespace.yaml",
 			readerAndApply: func(objBytes []byte) error {
-				_, _, err := resourceapply.ApplyNamespace(kubeClient.CoreV1(), eventRecorder, resourceread.ReadNamespaceV1OrDie(objBytes))
+				_, _, err := resourceapply.ApplyNamespace(ctx, kubeClient.CoreV1(), eventRecorder, resourceread.ReadNamespaceV1OrDie(objBytes))
 				return err
 			},
 		},
 		{
 			path: "assets/02_serviceaccount.yaml",
 			readerAndApply: func(objBytes []byte) error {
-				_, _, err := resourceapply.ApplyServiceAccount(kubeClient.CoreV1(), eventRecorder, resourceread.ReadServiceAccountV1OrDie(objBytes))
+				_, _, err := resourceapply.ApplyServiceAccount(ctx, kubeClient.CoreV1(), eventRecorder, resourceread.ReadServiceAccountV1OrDie(objBytes))
 				return err
 			},
 		},
 		{
 			path: "assets/03_clusterrole.yaml",
 			readerAndApply: func(objBytes []byte) error {
-				_, _, err := resourceapply.ApplyClusterRole(kubeClient.RbacV1(), eventRecorder, resourceread.ReadClusterRoleV1OrDie(objBytes))
+				_, _, err := resourceapply.ApplyClusterRole(ctx, kubeClient.RbacV1(), eventRecorder, resourceread.ReadClusterRoleV1OrDie(objBytes))
 				return err
 			},
 		},
 		{
 			path: "assets/04_clusterrolebinding.yaml",
 			readerAndApply: func(objBytes []byte) error {
-				_, _, err := resourceapply.ApplyClusterRoleBinding(kubeClient.RbacV1(), eventRecorder, resourceread.ReadClusterRoleBindingV1OrDie(objBytes))
+				_, _, err := resourceapply.ApplyClusterRoleBinding(ctx, kubeClient.RbacV1(), eventRecorder, resourceread.ReadClusterRoleBindingV1OrDie(objBytes))
 				return err
 			},
 		},
 		{
 			path: "assets/04_kube-scheduler-cluster-role-binding.yaml",
 			readerAndApply: func(objBytes []byte) error {
-				_, _, err := resourceapply.ApplyClusterRoleBinding(kubeClient.RbacV1(), eventRecorder, resourceread.ReadClusterRoleBindingV1OrDie(objBytes))
+				_, _, err := resourceapply.ApplyClusterRoleBinding(ctx, kubeClient.RbacV1(), eventRecorder, resourceread.ReadClusterRoleBindingV1OrDie(objBytes))
 				return err
 			},
 		},
 		{
 			path: "assets/04_volume-scheduler-cluster-role-binding.yaml",
 			readerAndApply: func(objBytes []byte) error {
-				_, _, err := resourceapply.ApplyClusterRoleBinding(kubeClient.RbacV1(), eventRecorder, resourceread.ReadClusterRoleBindingV1OrDie(objBytes))
+				_, _, err := resourceapply.ApplyClusterRoleBinding(ctx, kubeClient.RbacV1(), eventRecorder, resourceread.ReadClusterRoleBindingV1OrDie(objBytes))
 				return err
 			},
 		},
@@ -118,6 +118,7 @@ func TestMain(m *testing.M) {
 
 				required.Spec.Template.Spec.Containers[0].Image = registry + "/" + os.Getenv("NAMESPACE") + "/pipeline:secondary-scheduler-operator"
 				_, _, err := resourceapply.ApplyDeployment(
+					ctx,
 					kubeClient.AppsV1(),
 					eventRecorder,
 					required,
@@ -129,7 +130,7 @@ func TestMain(m *testing.M) {
 		{
 			path: "assets/06_configmap.yaml",
 			readerAndApply: func(objBytes []byte) error {
-				_, _, err := resourceapply.ApplyConfigMap(kubeClient.CoreV1(), eventRecorder, resourceread.ReadConfigMapV1OrDie(objBytes))
+				_, _, err := resourceapply.ApplyConfigMap(ctx, kubeClient.CoreV1(), eventRecorder, resourceread.ReadConfigMapV1OrDie(objBytes))
 				return err
 			},
 		},
