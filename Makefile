@@ -37,6 +37,12 @@ test-e2e: GO_TEST_FLAGS :=-v
 test-e2e: test-unit
 .PHONY: test-e2e
 
+regen-crd:
+	go build -o _output/tools/bin/controller-gen ./vendor/sigs.k8s.io/controller-tools/cmd/controller-gen
+	cp manifests/secondary-scheduler-operator.crd.yaml manifests/operator.openshift.io_secondaryschedulers.yaml
+	./_output/tools/bin/controller-gen crd paths=./pkg/apis/secondaryscheduler/v1/... schemapatch:manifests=./manifests output:crd:dir=./manifests
+	mv manifests/operator.openshift.io_secondaryschedulers.yaml manifests/secondary-scheduler-operator.crd.yaml
+
 generate: update-codegen-crds generate-clients
 .PHONY: generate
 
