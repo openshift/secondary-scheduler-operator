@@ -64,7 +64,7 @@ This process refers to building the operator in a way that it can be installed l
      namespace: openshift-marketplace
    spec:
      sourceType: grpc
-     image: quay.io/<<QUAY_USER>>/cluster-kube-descheduler-operator-index:<<IMAGE_TAG>>
+     image: quay.io/<<QUAY_USER>>/secondary-scheduler-operator-index:<<IMAGE_TAG>>
    ```
 
 1. create `openshift-secondary-scheduler-operator` namespace:
