@@ -10,4 +10,4 @@ approvers:
   - knelasevero
   - soltysh
   - wangchen615
-component: "kube-scheduler"
+component: "secondary-scheduler-operator"

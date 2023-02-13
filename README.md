@@ -26,6 +26,25 @@ The Secondary Scheduler Operator provides the ability to deploy a customized sch
    oc apply -f deploy/
    ```
 
+### Building index image from a bundle image (built in Brew)
+
+This process requires access to the Brew building system.
+
+1. List available bundle images (as IMAGE):
+   ```
+   $ brew list-builds --package=secondary-scheduler-operator-bundle-container
+   ```
+
+1. Get pull secret for selected bundle image (as IMAGE_PULL):
+   ```
+   $ brew --noauth call --json getBuild IMAGE |jq -r '.extra.image.index.pull[0]'
+   ```
+
+1. Build the index image (with IMAGE_TAG):
+   ```
+   $ opm index add --bundles IMAGE_PULL --tag quay.io/${QUAY_USER}/secondary-scheduler-operator-index:IMAGE_TAG
+   ```
+
 ### OperatorHub install with custom index image
 
 This process refers to building the operator in a way that it can be installed locally via the OperatorHub with a custom index image
