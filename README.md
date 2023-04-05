@@ -167,7 +167,7 @@ metadata:
   namespace: openshift-secondary-scheduler-operator
 spec:
   schedulerConfig: secondary-scheduler-config
-  schedulerImage: k8s.gcr.io/scheduler-plugins/kube-scheduler:v0.22.6
+  schedulerImage: k8s.gcr.io/scheduler-plugins/kube-scheduler:v0.24.9
 ```
 
 The operator spec provides a `schedulerConfig` and a `schedulerImage` field, which allows users to specify a custom KubeSchedulerConfiguration and a custom scheduler image.
