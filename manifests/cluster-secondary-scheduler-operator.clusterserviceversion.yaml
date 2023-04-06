@@ -69,7 +69,7 @@ spec:
   maintainers:
   - email: support@redhat.com
     name: Red Hat
-  minKubeVersion: 1.25.0
+  minKubeVersion: 1.26.0
   labels:
     olm-owner-enterprise-app: secondary-scheduler-operator
     olm-status-descriptors: secondary-scheduler-operator.v1.1.1
