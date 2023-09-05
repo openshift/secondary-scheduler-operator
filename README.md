@@ -2,6 +2,16 @@
 
 The Secondary Scheduler Operator provides the ability to deploy a customized scheduler image developed using the [scheduler plugin framework](https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/) with customized  configuration as a secondary scheduler in OpenShift.
 
+## Releases
+
+| osso version | ocp version |
+| ------------ | ----------- |
+| 1.0.0        | 4.10, 4.11  |
+| 1.0.1        | 4.10, 4.11  |
+| 1.1.0        | 4.12, 4.13  |
+| 1.1.1        | 4.13        |
+| 1.1.1        | 4.12, 4.13  |
+
 ## Deploy the Operator
 
 ### Quick Development
