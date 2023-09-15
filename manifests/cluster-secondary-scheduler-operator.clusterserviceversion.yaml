@@ -23,7 +23,7 @@ metadata:
     certified: "false"
     containerImage: registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-operator-rhel-8:latest
     createdAt: 2023/10/23
-    olm.skipRange: ">=1.0.0 <1.2.0"
+    olm.skipRange: ">=1.1.0 <1.2.0"
     description: Runs a secondary scheduler in an OpenShift cluster.
     repository: https://github.com/openshift/secondary-scheduler-operator
     support: Red Hat, Inc.
@@ -31,6 +31,7 @@ metadata:
     categories: OpenShift Optional
     operators.openshift.io/valid-subscription: '["OpenShift Container Platform", "OpenShift Platform Plus"]'
 spec:
+  replaces: secondaryscheduleroperator.v1.1.2
   customresourcedefinitions:
     owned:
     - displayName: Secondary Scheduler
