@@ -67,7 +67,7 @@ func NewTargetConfigReconciler(
 	osrClient openshiftrouteclientset.Interface,
 	dynamicClient dynamic.Interface,
 	eventRecorder events.Recorder,
-) *TargetConfigReconciler {
+) (*TargetConfigReconciler, error) {
 	c := &TargetConfigReconciler{
 		ctx:                        ctx,
 		operatorClient:             operatorConfigClient,
@@ -80,9 +80,12 @@ func NewTargetConfigReconciler(
 		kubeInformersForNamespaces: kubeInformersForNamespaces,
 	}
 
-	operatorClientInformer.Informer().AddEventHandler(c.eventHandler(queueItem{kind: "secondaryscheduler"}))
+	_, err := operatorClientInformer.Informer().AddEventHandler(c.eventHandler(queueItem{kind: "secondaryscheduler"}))
+	if err != nil {
+		return nil, err
+	}
 
-	kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err = kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {},
 		UpdateFunc: func(old, new interface{}) {
 			cm, ok := old.(*v1.ConfigMap)
@@ -101,8 +104,11 @@ func NewTargetConfigReconciler(
 			c.queue.Add(queueItem{kind: "configmap", name: cm.Name})
 		},
 	})
+	if err != nil {
+		return nil, err
+	}
 
-	return c
+	return c, nil
 }
 
 func (c TargetConfigReconciler) sync(item queueItem) error {

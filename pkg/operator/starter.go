@@ -60,7 +60,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		return err
 	}
 
-	targetConfigReconciler := NewTargetConfigReconciler(
+	targetConfigReconciler, err := NewTargetConfigReconciler(
 		ctx,
 		operatorConfigClient.SecondaryschedulersV1(),
 		operatorConfigInformers.Secondaryschedulers().V1().SecondarySchedulers(),
@@ -71,6 +71,9 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		dynamicClient,
 		cc.EventRecorder,
 	)
+	if err != nil {
+		return err
+	}
 
 	logLevelController := loglevel.NewClusterOperatorLoggingController(secondarySchedulerClient, cc.EventRecorder)
 
