@@ -31,6 +31,7 @@ metadata:
     categories: OpenShift Optional
     operators.openshift.io/valid-subscription: '["OpenShift Container Platform", "OpenShift Platform Plus"]'
 spec:
+  replaces: secondaryscheduleroperator.v1.1.1
   customresourcedefinitions:
     owned:
     - displayName: Secondary Scheduler
