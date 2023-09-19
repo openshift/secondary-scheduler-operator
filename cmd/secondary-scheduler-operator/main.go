@@ -12,7 +12,10 @@ import (
 func main() {
 	command := NewSecondarySchedulerOperatorCommand()
 	if err := command.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
+		_, err := fmt.Fprintf(os.Stderr, "%v\n", err)
+		if err != nil {
+			fmt.Printf("Unable to print err to stderr: %v", err)
+		}
 		os.Exit(1)
 	}
 }
@@ -22,7 +25,10 @@ func NewSecondarySchedulerOperatorCommand() *cobra.Command {
 		Use:   "secondary-scheduler-operator",
 		Short: "OpenShift cluster secondary-scheduler operator",
 		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Help()
+			err := cmd.Help()
+			if err != nil {
+				fmt.Printf("Unable to print help: %v", err)
+			}
 			os.Exit(1)
 		},
 	}
