@@ -161,6 +161,24 @@ const (
 	//
 	// Assigns each kube-apiserver an ID in a cluster.
 	APIServerIdentity featuregate.Feature = "APIServerIdentity"
+
+	// owner: @enj
+	// beta: v1.29
+	//
+	// Enables http2 DOS mitigations for unauthenticated clients.
+	//
+	// Some known reasons to disable these mitigations:
+	//
+	// An API server that is fronted by an L7 load balancer that is set up
+	// to mitigate http2 attacks may opt to disable this protection to prevent
+	// unauthenticated clients from disabling connection reuse between the load
+	// balancer and the API server (many incoming connections could share the
+	// same backend connection).
+	//
+	// An API server that is on a private network may opt to disable this
+	// protection to prevent performance regressions for unauthenticated
+	// clients.
+	UnauthenticatedHTTP2DOSMitigation featuregate.Feature = "UnauthenticatedHTTP2DOSMitigation"
 )
 
 func init() {
@@ -171,21 +189,22 @@ func init() {
 // To add a new feature, define a key for it above and add it here. The features will be
 // available throughout Kubernetes binaries.
 var defaultKubernetesFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
-	StreamingProxyRedirects:  {Default: true, PreRelease: featuregate.Deprecated},
-	ValidateProxyRedirects:   {Default: true, PreRelease: featuregate.Beta},
-	AdvancedAuditing:         {Default: true, PreRelease: featuregate.GA},
-	APIResponseCompression:   {Default: true, PreRelease: featuregate.Beta},
-	APIListChunking:          {Default: true, PreRelease: featuregate.Beta},
-	DryRun:                   {Default: true, PreRelease: featuregate.GA},
-	RemainingItemCount:       {Default: true, PreRelease: featuregate.Beta},
-	ServerSideApply:          {Default: true, PreRelease: featuregate.Beta},
-	StorageVersionHash:       {Default: true, PreRelease: featuregate.Beta},
-	StorageVersionAPI:        {Default: false, PreRelease: featuregate.Alpha},
-	WatchBookmark:            {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	APIPriorityAndFairness:   {Default: true, PreRelease: featuregate.Beta},
-	RemoveSelfLink:           {Default: true, PreRelease: featuregate.Beta},
-	SelectorIndex:            {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
-	WarningHeaders:           {Default: true, PreRelease: featuregate.Beta},
-	EfficientWatchResumption: {Default: true, PreRelease: featuregate.Beta},
-	APIServerIdentity:        {Default: false, PreRelease: featuregate.Alpha},
+	StreamingProxyRedirects:           {Default: true, PreRelease: featuregate.Deprecated},
+	ValidateProxyRedirects:            {Default: true, PreRelease: featuregate.Beta},
+	AdvancedAuditing:                  {Default: true, PreRelease: featuregate.GA},
+	APIResponseCompression:            {Default: true, PreRelease: featuregate.Beta},
+	APIListChunking:                   {Default: true, PreRelease: featuregate.Beta},
+	DryRun:                            {Default: true, PreRelease: featuregate.GA},
+	RemainingItemCount:                {Default: true, PreRelease: featuregate.Beta},
+	ServerSideApply:                   {Default: true, PreRelease: featuregate.Beta},
+	StorageVersionHash:                {Default: true, PreRelease: featuregate.Beta},
+	StorageVersionAPI:                 {Default: false, PreRelease: featuregate.Alpha},
+	UnauthenticatedHTTP2DOSMitigation: {Default: true, PreRelease: featuregate.Beta},
+	WatchBookmark:                     {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	APIPriorityAndFairness:            {Default: true, PreRelease: featuregate.Beta},
+	RemoveSelfLink:                    {Default: true, PreRelease: featuregate.Beta},
+	SelectorIndex:                     {Default: true, PreRelease: featuregate.GA, LockToDefault: true},
+	WarningHeaders:                    {Default: true, PreRelease: featuregate.Beta},
+	EfficientWatchResumption:          {Default: true, PreRelease: featuregate.Beta},
+	APIServerIdentity:                 {Default: false, PreRelease: featuregate.Alpha},
 }
