@@ -87,6 +87,9 @@ type ControllerBuilder struct {
 	// This stub exists for unit test where we can check if the graceful termination work properly.
 	// Default function will klog.Warning(args) and os.Exit(1).
 	nonZeroExitFn func(args ...interface{})
+
+	// Allow enabling HTTP2
+	enableHTTP2 bool
 }
 
 // NewController returns a builder struct for constructing the command you want to run
@@ -157,6 +160,12 @@ func (b *ControllerBuilder) WithServer(servingInfo configv1.HTTPServingInfo, aut
 	configdefaults.SetRecommendedHTTPServingInfoDefaults(b.servingInfo)
 	b.authenticationConfig = &authenticationConfig
 	b.authorizationConfig = &authorizationConfig
+	return b
+}
+
+// WithHTTP2 indicates that http2 should be enabled
+func (b *ControllerBuilder) WithHTTP2() *ControllerBuilder {
+	b.enableHTTP2 = true
 	return b
 }
 
@@ -247,7 +256,7 @@ func (b *ControllerBuilder) Run(ctx context.Context, config *unstructured.Unstru
 
 	var server *genericapiserver.GenericAPIServer
 	if b.servingInfo != nil {
-		serverConfig, err := serving.ToServerConfig(ctx, *b.servingInfo, *b.authenticationConfig, *b.authorizationConfig, kubeConfig)
+		serverConfig, err := serving.ToServerConfig(ctx, *b.servingInfo, *b.authenticationConfig, *b.authorizationConfig, kubeConfig, b.enableHTTP2)
 		if err != nil {
 			return err
 		}
