@@ -3,10 +3,10 @@ module github.com/openshift/secondary-scheduler-operator
 go 1.19
 
 require (
-	github.com/openshift/api v0.0.0-20230120195050-6ba31fa438f2
-	github.com/openshift/build-machinery-go v0.0.0-20220913142420-e25cf57ea46d
+	github.com/openshift/api v0.0.0-20230803134339-2d9b46419536
+	github.com/openshift/build-machinery-go v0.0.0-20230301101616-cc7b88a966e2
 	github.com/openshift/client-go v0.0.0-20230120202327-72f107311084
-	github.com/openshift/library-go v0.0.0-20230120214501-9bc305884fcb
+	github.com/openshift/library-go v0.0.0-20231020125026-aa39c7c45714
 	github.com/prometheus/client_golang v1.14.0
 	github.com/spf13/cobra v1.6.1
 	k8s.io/api v0.26.1
