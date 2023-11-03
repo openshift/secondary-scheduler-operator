@@ -4,14 +4,12 @@ The Secondary Scheduler Operator provides the ability to deploy a customized sch
 
 ## Releases
 
-| osso version | ocp version |
-| ------------ | ----------- |
-| 1.0.0        | 4.10, 4.11  |
-| 1.0.1        | 4.10, 4.11  |
-| 1.1.0        | 4.12, 4.13  |
-| 1.1.1        | 4.13        |
-| 1.1.2        | 4.12, 4.13  |
-| 1.2.0        | 4.14, 4.15  |
+| osso version | ocp version       | k8s version | golang |
+| ------------ | ----------------- | ----------- | ------ |
+| 1.1.0        | 4.11-4.13         | 1.21        | 1.18   |
+| 1.1.2        | 4.12, 4.13        | 1.26        | 1.19   |
+| 1.1.3        | 4.12, 4.13        | 1.26        | 1.19   |
+| 1.2.0        | 4.14, 4.15        | 1.27        | 1.20   |
 
 ## Deploy the Operator
 
