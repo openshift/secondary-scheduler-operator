@@ -10,6 +10,7 @@ The Secondary Scheduler Operator provides the ability to deploy a customized sch
 | 1.1.2        | 4.12, 4.13        | 1.26        | 1.19   |
 | 1.1.3        | 4.12, 4.13        | 1.26        | 1.19   |
 | 1.2.0        | 4.14, 4.15        | 1.27        | 1.20   |
+| 1.2.1        | 4.14, 4.15        | 1.28        | 1.20   |
 
 ## Deploy the Operator
 
