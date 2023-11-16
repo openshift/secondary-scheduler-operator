@@ -35,12 +35,9 @@ spec:
           - name: ENABLE_OPENSHIFT_AUTH
             value: "true"
           resources:
-            limits:
-              cpu: "100m"
-              memory: "500Mi"
             requests:
-              cpu: "100m"
-              memory: "500Mi"
+              cpu: 15m
+              memory: 50Mi
           args:
             - /bin/kube-scheduler
             - --config=/etc/kubernetes/config.yaml
