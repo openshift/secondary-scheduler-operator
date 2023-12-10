@@ -21,7 +21,7 @@ metadata:
         }
       ]
     certified: "false"
-    containerImage: registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-operator-rhel-8:latest
+    containerImage: registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-rhel9-operator:latest
     createdAt: 2023/11/07
     olm.skipRange: ">=1.1.0 <1.2.1"
     description: Runs a secondary scheduler in an OpenShift cluster.
@@ -155,7 +155,7 @@ spec:
                     allowPrivilegeEscalation: false
                     capabilities:
                       drop: ["ALL"]
-                  image: registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-operator-rhel-8:latest
+                  image: registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-rhel9-operator:latest
                   resources:
                     requests:
                       memory: 50Mi
