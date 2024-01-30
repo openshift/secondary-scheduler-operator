@@ -125,6 +125,14 @@ spec:
           - list
           - create
           - update
+        - apiGroups:
+          - config.openshift.io
+          resources:
+          - infrastructures
+          verbs:
+          - get
+          - list
+          - watch
       deployments:
       - name: secondary-scheduler-operator
         spec:
