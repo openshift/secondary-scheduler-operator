@@ -31,7 +31,7 @@ metadata:
     features.operators.openshift.io/token-auth-azure: "false"
     features.operators.openshift.io/token-auth-gcp: "false"
     features.operators.openshift.io/cnf: "false"
-    features.operators.openshift.io/cni	: "false"
+    features.operators.openshift.io/cni: "false"
     features.operators.openshift.io/csi: "false"
     olm.skipRange: ">=1.2.1 <1.3.0"
     description: Runs a secondary scheduler in an OpenShift cluster.
