@@ -28,7 +28,7 @@ spec:
         - name: "secondary-scheduler"
           securityContext:
             allowPrivilegeEscalation: false
-            readOnlyRootFilesystem': true
+            readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
           image: ${IMAGE}

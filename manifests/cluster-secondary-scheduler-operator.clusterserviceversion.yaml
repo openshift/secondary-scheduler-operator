@@ -163,7 +163,7 @@ spec:
                 - name: secondary-scheduler-operator
                   securityContext:
                     allowPrivilegeEscalation: false
-                    readOnlyRootFilesystem': true
+                    readOnlyRootFilesystem: true
                     capabilities:
                       drop: ["ALL"]
                   image: registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-rhel9-operator:latest
