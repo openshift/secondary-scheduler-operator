@@ -104,7 +104,14 @@ spec:
           - secondaryschedulers
           - secondaryschedulers/status
           verbs:
-          - "*"
+          - create
+          - delete
+          - deletecollection
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - ""
           resources:
@@ -112,19 +119,40 @@ spec:
           - configmaps
           - events
           verbs:
-          - "*"
+          - create
+          - delete
+          - deletecollection
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - rbac.authorization.k8s.io
           resources:
           - clusterrolebindings
           verbs:
-          - '*'
+          - create
+          - delete
+          - deletecollection
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - apps
           resources:
           - deployments
           verbs:
-          - "*"
+          - create
+          - delete
+          - deletecollection
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - coordination.k8s.io
           resources:
