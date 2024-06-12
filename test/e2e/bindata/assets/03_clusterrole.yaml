@@ -9,7 +9,14 @@ rules:
   - secondaryschedulers
   - secondaryschedulers/status
   verbs:
-  - "*"
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - ""
   resources:
@@ -17,7 +24,14 @@ rules:
   - configmaps
   - events
   verbs:
-  - "*"
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
@@ -29,7 +43,14 @@ rules:
   resources:
   - deployments
   verbs:
-  - "*"
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - coordination.k8s.io
   resources:
