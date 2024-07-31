@@ -33,7 +33,7 @@ metadata:
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "false"
     features.operators.openshift.io/csi: "false"
-    olm.skipRange: ">=1.2.1 <1.3.1"
+    olm.skipRange: ">=1.2.0 <1.3.1"
     description: Runs a secondary scheduler in an OpenShift cluster.
     repository: https://github.com/openshift/secondary-scheduler-operator
     support: Red Hat, Inc.
@@ -41,7 +41,18 @@ metadata:
     categories: OpenShift Optional
     operators.openshift.io/valid-subscription: '["OpenShift Container Platform", "OpenShift Platform Plus"]'
 spec:
-  replaces: secondaryscheduleroperator.v1.3.0
+  replaces: secondaryscheduleroperator.v1.2.0
+  # buffering up to 6 1.2.z releases to allow to include these in all supported bundle index images
+  # The buffer len 6 should be sufficient for normal cadance. Including CVE releases.
+  # The buffer can be extened later as needed.
+  skips:
+  - secondaryscheduleroperator.v1.2.1
+  - secondaryscheduleroperator.v1.2.2
+  - secondaryscheduleroperator.v1.2.3
+  - secondaryscheduleroperator.v1.2.4
+  - secondaryscheduleroperator.v1.2.5
+  - secondaryscheduleroperator.v1.2.6
+  - secondaryscheduleroperator.v1.3.0
   customresourcedefinitions:
     owned:
     - displayName: Secondary Scheduler
