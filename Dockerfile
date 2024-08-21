@@ -1,17 +1,21 @@
-FROM registry.ci.openshift.org/openshift/release:golang-1.20 AS builder
+FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_9_1.22 as builder
 WORKDIR /go/src/github.com/openshift/secondary-scheduler-operator
 COPY . .
+RUN make build --warn-undefined-variables
 
-RUN make build
-
-FROM registry.ci.openshift.org/openshift/origin-v4.0:base
+FROM registry.redhat.io/rhel9-4-els/rhel:9.4-847.1719484506
 COPY --from=builder /go/src/github.com/openshift/secondary-scheduler-operator/secondary-scheduler-operator /usr/bin/
-# Upstream bundle and index images does not support versioning so
-# we need to copy a specific version under /manifests layout directly
-COPY --from=builder /go/src/github.com/openshift/secondary-scheduler-operator/manifests/* /manifests/
+RUN mkdir /licenses
+COPY --from=builder /go/src/github.com/openshift/secondary-scheduler-operator/LICENSE /licenses/.
 
-LABEL io.k8s.display-name="OpenShift Secondary-scheduler Operator" \
-      io.k8s.description="This is a component of OpenShift and manages the secondary scheduler" \
+LABEL io.k8s.display-name="OpenShift Secondary-scheduler Operator based on RHEL 9" \
+      io.k8s.description="This is a component of OpenShift and manages the secondary scheduler based on RHEL 9" \
+      com.redhat.component="secondary-scheduler-operator-container" \
+      name="secondary-scheduler-rhel9-operator" \
+      summary="secondary-scheduler-operator" \
+      io.openshift.expose-services="" \
       io.openshift.tags="openshift,secondary-scheduler-operator" \
-      com.redhat.delivery.appregistry=true \
-      maintainer="AOS workloads team, <aos-workloads@redhat.com>"
+      description="secondary-scheduler-operator-container" \
+      maintainer="AOS workloads team, <aos-workloads-staff@redhat.com>"
+
+USER nobody
