@@ -122,6 +122,9 @@ spec:
       description: Path to a file with build arguments for buildah, see https://www.mankier.com/1/buildah-build#--build-arg-file
       name: build-args-file
       type: string
+    - default: "snyk-secret"
+      description: Snyk Token Secret Name
+      name: snyk-secret
     results:
     - description: ""
       name: IMAGE_URL
