@@ -24,7 +24,7 @@ spec:
             readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
-          image: quay.io/openshift/secondary-scheduler-operator:4.9
+          image: quay.io/openshift/secondary-scheduler-operator:4.17
           ports:
           - containerPort: 60000
             name: metrics
