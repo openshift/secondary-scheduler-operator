@@ -1,9 +1,15 @@
+FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_9_1.22 as builder
+WORKDIR /go/src/github.com/openshift/secondary-scheduler-operator
+COPY . .
+
+RUN mkdir licenses
+COPY ./LICENSE licenses/.
+
 FROM scratch
 
 COPY ./manifests /manifests
 COPY ./metadata /metadata
-RUN mkdir licenses
-COPY ./LICENSE licenses/.
+COPY ./licenses /licenses
 
 LABEL operators.operatorframework.io.bundle.mediatype.v1="registry+v1"
 LABEL operators.operatorframework.io.bundle.manifests.v1=manifests/
