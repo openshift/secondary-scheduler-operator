@@ -7,9 +7,9 @@ COPY ./LICENSE licenses/.
 
 FROM scratch
 
-COPY ./manifests /manifests
-COPY ./metadata /metadata
-COPY ./licenses /licenses
+COPY --from=builder /go/src/github.com/openshift/secondary-scheduler-operator/manifests /manifests
+COPY --from=builder /go/src/github.com/openshift/secondary-scheduler-operator/metadata /metadata
+COPY --from=builder /go/src/github.com/openshift/secondary-scheduler-operator/licenses /licenses
 
 LABEL operators.operatorframework.io.bundle.mediatype.v1="registry+v1"
 LABEL operators.operatorframework.io.bundle.manifests.v1=manifests/
