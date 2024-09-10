@@ -4,6 +4,11 @@ metadata:
   # The version value is substituted by the ART pipeline
   name: secondaryscheduleroperator.v1.3.1
   namespace: openshift-secondary-scheduler-operator
+  labels:
+    operatorframework.io/arch.amd64: supported
+    operatorframework.io/arch.arm64: supported
+    operatorframework.io/arch.ppc64le: supported
+    operatorframework.io/arch.s390x: supported
   annotations:
     alm-examples: |
       [
