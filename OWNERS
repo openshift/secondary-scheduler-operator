@@ -1,13 +1,5 @@
 reviewers:
   - ingvagabund
-  - mfojtik
-  - knelasevero
-  - soltysh
-  - wangchen615
 approvers:
   - ingvagabund
-  - mfojtik
-  - knelasevero
-  - soltysh
-  - wangchen615
 component: "secondary-scheduler-operator"
