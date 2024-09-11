@@ -29,7 +29,6 @@ LABEL operators.operatorframework.io.metrics.project_layout=go.kubebuilder.io/v4
 LABEL com.redhat.component="secondary-scheduler-operator-bundle-container"
 LABEL description="Secondary scheduler support for OpenShift"
 LABEL distribution-scope="public"
-# LABEL name="cli-manager-operator-bundle"
 LABEL name="secondary-scheduler-operator-metadata-rhel-9"
 LABEL release="1.4.0"
 LABEL version="1.4.0"
