@@ -25,6 +25,12 @@ spec:
     value: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator/secondary-scheduler-operator:{{revision}}
   - name: dockerfile
     value: Dockerfile
+  - name: build-platforms
+    value:
+      - linux/x86_64
+      - linux/arm64
+      - linux/ppc64le
+      - linux/s390x
   pipelineSpec:
     finally:
     - name: show-sbom
