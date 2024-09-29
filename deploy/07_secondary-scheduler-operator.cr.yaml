@@ -1,9 +1,0 @@
-apiVersion: operator.openshift.io/v1
-kind: SecondaryScheduler
-metadata:
-  name: cluster
-  namespace: openshift-secondary-scheduler-operator
-spec:
-  managementState: Managed
-  schedulerConfig: customized
-  schedulerImage: registry.k8s.io/scheduler-plugins/kube-scheduler:v0.29.8
