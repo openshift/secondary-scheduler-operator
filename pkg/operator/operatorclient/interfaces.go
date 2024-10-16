@@ -2,13 +2,20 @@ package operatorclient
 
 import (
 	"context"
+	"fmt"
 
-	operatorv1 "github.com/openshift/api/operator/v1"
-	"github.com/openshift/library-go/pkg/operator/v1helpers"
-	operatorconfigclientv1 "github.com/openshift/secondary-scheduler-operator/pkg/generated/clientset/versioned/typed/secondaryscheduler/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/cache"
+
+	operatorv1 "github.com/openshift/api/operator/v1"
+	"github.com/openshift/library-go/pkg/operator/v1helpers"
+
+	applyconfiguration "github.com/openshift/client-go/operator/applyconfigurations/operator/v1"
+	secondaryschedulerapplyconfiguration "github.com/openshift/secondary-scheduler-operator/pkg/generated/applyconfiguration/secondaryscheduler/v1"
+	operatorconfigclientv1 "github.com/openshift/secondary-scheduler-operator/pkg/generated/clientset/versioned/typed/secondaryscheduler/v1"
 )
 
 const OperatorNamespace = "openshift-secondary-scheduler-operator"
@@ -78,4 +85,80 @@ func (c *SecondarySchedulerClient) GetObjectMeta() (meta *metav1.ObjectMeta, err
 		return nil, err
 	}
 	return &instance.ObjectMeta, nil
+}
+
+func (c *SecondarySchedulerClient) ApplyOperatorSpec(ctx context.Context, fieldManager string, desiredConfiguration *applyconfiguration.OperatorSpecApplyConfiguration) error {
+	if desiredConfiguration == nil {
+		return fmt.Errorf("applyConfiguration must have a value")
+	}
+
+	desiredSpec := &secondaryschedulerapplyconfiguration.SecondarySchedulerSpecApplyConfiguration{
+		OperatorSpecApplyConfiguration: *desiredConfiguration,
+	}
+	desired := secondaryschedulerapplyconfiguration.SecondaryScheduler(OperatorConfigName, OperatorNamespace)
+	desired.WithSpec(desiredSpec)
+
+	instance, err := c.OperatorClient.SecondarySchedulers(OperatorNamespace).Get(ctx, OperatorConfigName, metav1.GetOptions{})
+	switch {
+	case apierrors.IsNotFound(err):
+	// do nothing and proceed with the apply
+	case err != nil:
+		return fmt.Errorf("unable to get operator configuration: %w", err)
+	default:
+		original, err := secondaryschedulerapplyconfiguration.ExtractSecondaryScheduler(instance, fieldManager)
+		if err != nil {
+			return fmt.Errorf("unable to extract operator configuration: %w", err)
+		}
+		if equality.Semantic.DeepEqual(original, desired) {
+			return nil
+		}
+	}
+
+	_, err = c.OperatorClient.SecondarySchedulers(OperatorNamespace).Apply(ctx, desired, v1.ApplyOptions{
+		Force:        true,
+		FieldManager: fieldManager,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to Apply for operator using fieldManager %q: %w", fieldManager, err)
+	}
+
+	return nil
+}
+
+func (c *SecondarySchedulerClient) ApplyOperatorStatus(ctx context.Context, fieldManager string, desiredConfiguration *applyconfiguration.OperatorStatusApplyConfiguration) error {
+	if desiredConfiguration == nil {
+		return fmt.Errorf("applyConfiguration must have a value")
+	}
+
+	desiredStatus := &secondaryschedulerapplyconfiguration.SecondarySchedulerStatusApplyConfiguration{
+		OperatorStatusApplyConfiguration: *desiredConfiguration,
+	}
+	desired := secondaryschedulerapplyconfiguration.SecondaryScheduler(OperatorConfigName, OperatorNamespace)
+	desired.WithStatus(desiredStatus)
+
+	instance, err := c.OperatorClient.SecondarySchedulers(OperatorNamespace).Get(ctx, OperatorConfigName, metav1.GetOptions{})
+	switch {
+	case apierrors.IsNotFound(err):
+		// do nothing and proceed with the apply
+	case err != nil:
+		return fmt.Errorf("unable to get operator configuration: %w", err)
+	default:
+		original, err := secondaryschedulerapplyconfiguration.ExtractSecondarySchedulerStatus(instance, fieldManager)
+		if err != nil {
+			return fmt.Errorf("unable to extract operator configuration: %w", err)
+		}
+		if equality.Semantic.DeepEqual(original, desired) {
+			return nil
+		}
+	}
+
+	_, err = c.OperatorClient.SecondarySchedulers(OperatorNamespace).ApplyStatus(ctx, desired, v1.ApplyOptions{
+		Force:        true,
+		FieldManager: fieldManager,
+	})
+	if err != nil {
+		return fmt.Errorf("unable to ApplyStatus for operator using fieldManager %q: %w", fieldManager, err)
+	}
+
+	return nil
 }
