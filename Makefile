@@ -48,7 +48,7 @@ generate: update-codegen-crds generate-clients
 .PHONY: generate
 
 generate-clients:
-	bash ./vendor/k8s.io/code-generator/generate-groups.sh all github.com/openshift/secondary-scheduler-operator/pkg/generated github.com/openshift/secondary-scheduler-operator/pkg/apis secondaryscheduler:v1
+	GO=GO111MODULE=on GOFLAGS=-mod=readonly hack/update-codegen.sh
 .PHONY: generate-clients
 
 clean:
