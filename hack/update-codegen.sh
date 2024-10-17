@@ -16,14 +16,19 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-# generate the code with:
-# --output-base    because this script should also be able to run inside the vendor dir of
-#                  k8s.io/kubernetes. The output-base is needed for the generators to output into the vendor dir
-#                  instead of the $GOPATH directly. For normal projects this can be dropped.
-../vendor/k8s.io/code-generator/generate-groups.sh \
-  "deepcopy,client,informer,lister" \
-  secondary-scheduler-operator/pkg/generated \
-  secondary-scheduler-operator/pkg/apis \
-  secondaryscheduler:v1 \
-  --go-header-file $(pwd)/boilerplate.go.txt \
-  --output-base $(pwd)/../../
+SCRIPT_ROOT=$(unset CDPATH && cd $(dirname "${BASH_SOURCE[0]}")/.. && pwd)
+
+source "${SCRIPT_ROOT}/vendor/k8s.io/code-generator/kube_codegen.sh"
+
+kube::codegen::gen_helpers \
+    --boilerplate "${SCRIPT_ROOT}/hack/boilerplate.go.txt" \
+    "${SCRIPT_ROOT}/pkg/apis"
+
+kube::codegen::gen_client \
+    --output-dir "${SCRIPT_ROOT}/pkg/generated" \
+    --output-pkg "github.com/openshift/secondary-scheduler-operator/pkg/generated" \
+    --applyconfig-externals "github.com/openshift/api/operator/v1.OperatorSpec:github.com/openshift/client-go/operator/applyconfigurations/operator/v1,github.com/openshift/api/operator/v1.OperatorStatus:github.com/openshift/client-go/operator/applyconfigurations/operator/v1,github.com/openshift/api/operator/v1.OperatorCondition:github.com/openshift/client-go/operator/applyconfigurations/operator/v1,github.com/openshift/api/operator/v1.GenerationStatus:github.com/openshift/client-go/operator/applyconfigurations/operator/v1" \
+    --boilerplate "${SCRIPT_ROOT}/hack/boilerplate.go.txt" \
+    --with-applyconfig \
+    --with-watch \
+    "${SCRIPT_ROOT}/pkg/apis"
