@@ -201,10 +201,10 @@ spec:
           value: task
         resolver: bundles
       when:
-      - input: $(params.prefetch-input)
-        operator: notin
+      - input: $(params.hermetic)
+        operator: in
         values:
-        - ""
+        - "true"
       workspaces:
       - name: source
         workspace: workspace
@@ -245,7 +245,7 @@ spec:
           value: task
         resolver: bundles
       when:
-      - input: $(params.hermetic)
+      - input: $(tasks.init.results.build)
         operator: in
         values:
         - "true"
