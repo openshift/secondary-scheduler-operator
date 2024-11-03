@@ -242,7 +242,7 @@ spec:
           value: task
         resolver: bundles
       when:
-      - input: $(tasks.init.results.build)
+      - input: $(params.hermetic)
         operator: in
         values:
         - "true"
