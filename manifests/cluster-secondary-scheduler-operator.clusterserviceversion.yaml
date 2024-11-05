@@ -198,6 +198,12 @@ spec:
                           fieldPath: metadata.namespace
                     - name: OPERATOR_NAME
                       value: "secondary-scheduler-operator"
+                  volumeMounts:
+                  - name: tmp
+                    mountPath: "/tmp"
               serviceAccountName: secondary-scheduler-operator
               serviceAccount: openshift-secondary-scheduler-operator
+              volumes:
+              - name: tmp
+                emptyDir: {}
     strategy: deployment
