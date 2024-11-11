@@ -105,7 +105,7 @@
         },
         {
             "schema": "olm.bundle",
-            "image": "registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-operator-metadata-rhel-9:v1.2-30"
+            "image": "registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-operator-metadata-rhel-9:v1.2-41"
         },
         {
             "schema": "olm.bundle",
