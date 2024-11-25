@@ -22,7 +22,7 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-fbc-4-17/secondary-scheduler-operator-fbc-4-17:{{revision}}
+    value: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-fbc-4-17:{{revision}}
   - name: dockerfile
     value: catalog.Dockerfile
   - name: path-context
