@@ -1,4 +1,4 @@
 images:
   image_1: registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator@sha256:d91bf78f6015f85e17db3cbc564a6f84d880b808a7084352599d782fb51fd3b6
-  image_2: registry.stage.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator@sha256:75fe514796007715120d84f1e1965e6a98560b828f537d9a42aede51746b17a6
-  image_3: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-4-17/secondary-scheduler-operator-4-17@sha256:75fe514796007715120d84f1e1965e6a98560b828f537d9a42aede51746b17a6
+  image_2: registry.stage.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator@sha256:cc21c1de03030b96c45437236bfd8140929f2db6d4c24901a39f6b34fcb9b9fb
+  image_3: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-4-17/secondary-scheduler-operator-4-17@sha256:cc21c1de03030b96c45437236bfd8140929f2db6d4c24901a39f6b34fcb9b9fb
