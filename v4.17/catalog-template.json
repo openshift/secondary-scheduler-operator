@@ -122,7 +122,7 @@
         },
         {
             "schema": "olm.bundle",
-            "image": "registry.stage.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:2da61c64074069015a1b2af6eeb9c023c1f803e3e5c7d16c8828bb020d7a181d"
+            "image": "registry.stage.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:fb8cf57beddc3820110da5f8e3344548c44070356966f6be3071e2401b1350ed"
         }
     ]
 }
