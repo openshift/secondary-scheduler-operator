@@ -96,7 +96,7 @@ spec:
       description: Skip checks against built image
       name: skip-checks
       type: string
-    - default: "false"
+    - default: "true"
       description: Execute the build with network isolation
       name: hermetic
       type: string
@@ -108,7 +108,7 @@ spec:
       description: Image tag expiration time, time values could be something like
         1h, 2d, 3w for hours, days, and weeks, respectively.
       name: image-expires-after
-    - default: "false"
+    - default: "true"
       description: Build a source image.
       name: build-source-image
       type: string
@@ -198,10 +198,10 @@ spec:
           value: task
         resolver: bundles
       when:
-      - input: $(params.prefetch-input)
-        operator: notin
+      - input: $(params.hermetic)
+        operator: in
         values:
-        - ""
+        - "true"
       workspaces:
       - name: source
         workspace: workspace
@@ -457,12 +457,12 @@ spec:
         workspace: workspace
     - name: rpms-signature-scan
       params:
-      - name: image-url
-        value: $(tasks.build-image-index.results.IMAGE_URL)
       - name: image-digest
-        value: $(tasks.build-image-index.results.IMAGE_DIGEST)
+        value: $(tasks.build-container.results.IMAGE_DIGEST)
+      - name: image-url
+        value: $(tasks.build-container.results.IMAGE_URL)
       runAfter:
-      - build-image-index
+      - build-container
       taskRef:
         params:
         - name: name
@@ -472,11 +472,6 @@ spec:
         - name: kind
           value: task
         resolver: bundles
-      when:
-      - input: $(params.skip-checks)
-        operator: in
-        values:
-        - "false"
     workspaces:
     - name: workspace
     - name: git-auth
