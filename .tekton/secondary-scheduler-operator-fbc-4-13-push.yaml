@@ -7,13 +7,13 @@ metadata:
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
     pipelinesascode.tekton.dev/max-keep-runs: "3"
     pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch
-      == "fbc-4.15"
+      == "fbc-4.13"
   creationTimestamp: null
   labels:
-    appstudio.openshift.io/application: secondary-scheduler-operator-fbc-4-15
-    appstudio.openshift.io/component: secondary-scheduler-operator-fbc-4-15
+    appstudio.openshift.io/application: secondary-scheduler-operator-fbc-4-13
+    appstudio.openshift.io/component: secondary-scheduler-operator-fbc-4-13
     pipelines.appstudio.openshift.io/type: build
-  name: secondary-scheduler-operator-fbc-4-15-on-push
+  name: secondary-scheduler-operator-fbc-4-13-on-push
   namespace: crt-nshift-secondary-tenant
 spec:
   params:
@@ -22,11 +22,11 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-fbc-4-15:{{revision}}
+    value: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-fbc-4-13:{{revision}}
   - name: dockerfile
     value: catalog.Dockerfile
   - name: path-context
-    value: v4.15
+    value: v4.13
   - name: build-platforms
     value:
     - linux/x86_64
