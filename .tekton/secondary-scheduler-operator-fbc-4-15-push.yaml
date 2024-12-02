@@ -25,6 +25,8 @@ spec:
     value: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-fbc-4-15:{{revision}}
   - name: dockerfile
     value: catalog.Dockerfile
+  - name: path-context
+    value: v4.15
   pipelineSpec:
     description: |
       This pipeline is ideal for building and verifying [file-based catalogs](https://konflux-ci.dev/docs/advanced-how-tos/building-olm.adoc#building-the-file-based-catalog).
