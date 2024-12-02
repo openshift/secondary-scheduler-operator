@@ -14,5 +14,5 @@ To update the catalog
 
 ```
 $ cd v4.15
-$ opm alpha render-template basic catalog-template.json --migrate-level bundle-object-to-csv-metadata > catalog/openshift-secondary-scheduler-operator/catalog.json
+$ opm alpha render-template basic catalog-template.json > catalog/openshift-secondary-scheduler-operator/catalog.json
 ```
