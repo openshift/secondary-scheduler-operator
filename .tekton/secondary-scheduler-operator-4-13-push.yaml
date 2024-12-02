@@ -111,6 +111,9 @@ spec:
         set of values is determined by the configuration of the multi-platform-controller.
       name: build-platforms
       type: array
+    - default: "snyk-secret"
+      description: Snyk Token Secret Name
+      name: snyk-secret
     results:
     - description: ""
       name: IMAGE_URL
