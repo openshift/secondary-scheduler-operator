@@ -8,7 +8,8 @@ metadata:
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
     pipelinesascode.tekton.dev/max-keep-runs: "3"
     pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && target_branch
-      == "fbc-4.15"
+      == "fbc-4.15" && ( "v4.15/***".pathChanged() || ".tekton/secondary-scheduler-operator-fbc-4-15-pull-request.yaml".pathChanged()
+      )
   creationTimestamp: null
   labels:
     appstudio.openshift.io/application: secondary-scheduler-operator-fbc-4-15
@@ -28,6 +29,8 @@ spec:
     value: 5d
   - name: dockerfile
     value: catalog.Dockerfile
+  - name: path-context
+    value: v4.15
   pipelineSpec:
     description: |
       This pipeline is ideal for building and verifying [file-based catalogs](https://konflux-ci.dev/docs/advanced-how-tos/building-olm.adoc#building-the-file-based-catalog).
