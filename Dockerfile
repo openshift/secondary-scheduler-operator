@@ -1,4 +1,4 @@
-FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_9_1.18 as builder
+FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_8_1.18 as builder
 WORKDIR /go/src/github.com/openshift/secondary-scheduler-operator
 COPY . .
 RUN make build --warn-undefined-variables
