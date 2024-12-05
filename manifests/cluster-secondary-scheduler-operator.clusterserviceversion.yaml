@@ -45,6 +45,9 @@ metadata:
     capabilities: Basic Install
     categories: OpenShift Optional
     operators.openshift.io/valid-subscription: '["OpenShift Container Platform", "OpenShift Platform Plus"]'
+    operatorframework.io/cluster-monitoring: "true"
+    operatorframework.io/suggested-namespace: "openshift-secondary-scheduler-operator"
+    console.openshift.io/operator-monitoring-default: "true"
 spec:
   replaces: secondaryscheduleroperator.v1.2.0
   # buffering up to 6 1.2.z releases to allow to include these in all supported bundle index images
