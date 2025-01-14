@@ -168,23 +168,6 @@ func (c TargetConfigReconciler) sync(item queueItem) error {
 	return err
 }
 
-func (c *TargetConfigReconciler) manageConfigMap(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (*v1.ConfigMap, bool, error) {
-	var required *v1.ConfigMap
-	var err error
-
-	required, err = c.kubeClient.CoreV1().ConfigMaps(secondaryScheduler.Namespace).Get(context.TODO(), string(secondaryScheduler.Spec.SchedulerConfig), metav1.GetOptions{})
-
-	if err != nil {
-		klog.Errorf("Cannot load ConfigMap %s for the secondaryscheduler", string(secondaryScheduler.Spec.SchedulerConfig))
-		return nil, false, err
-	}
-
-	secondarySchedulerConfigMap = string(secondaryScheduler.Spec.SchedulerConfig)
-	klog.Infof("Find ConfigMap %s for the secondaryscheduler.", secondaryScheduler.Spec.SchedulerConfig)
-
-	return resourceapply.ApplyConfigMap(c.ctx, c.kubeClient.CoreV1(), c.eventRecorder, required)
-}
-
 func (c *TargetConfigReconciler) getConfigMapResourceVersion(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (string, error) {
 	required, err := c.kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Lister().ConfigMaps(operatorclient.OperatorNamespace).Get(secondaryScheduler.Spec.SchedulerConfig)
 	if err != nil {
