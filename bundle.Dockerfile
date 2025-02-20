@@ -40,7 +40,7 @@ LABEL io.k8s.display-name="Openshift Secondary Scheduler Operator Bundle"
 LABEL io.k8s.description="This is a bundle image for Secondary Scheduler"
 LABEL io.openshift.tags="openshift,secondary-scheduler-operator"
 LABEL com.redhat.delivery.operator.bundle=true
-LABEL com.redhat.openshift.versions="v4.16"
+LABEL com.redhat.openshift.versions="v4.18"
 LABEL com.redhat.delivery.appregistry=true
 LABEL maintainer="AOS workloads team, <aos-workloads-staff@redhat.com>"
 
