@@ -4,16 +4,18 @@ metadata:
   annotations:
     build.appstudio.openshift.io/repo: https://github.com/openshift/secondary-scheduler-operator?rev={{revision}}
     build.appstudio.redhat.com/commit_sha: '{{revision}}'
+    build.appstudio.redhat.com/pull_request_number: '{{pull_request_number}}'
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
     pipelinesascode.tekton.dev/max-keep-runs: "3"
-    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch
-      == "fbc-4.17"
+    pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && target_branch
+      == "fbc-4.18" && ( "v4.18/***".pathChanged() || ".tekton/secondary-scheduler-operator-fbc-4-18-pull-request.yaml".pathChanged()
+      )
   creationTimestamp: null
   labels:
-    appstudio.openshift.io/application: secondary-scheduler-operator-fbc-4-17
-    appstudio.openshift.io/component: secondary-scheduler-operator-fbc-4-17
+    appstudio.openshift.io/application: secondary-scheduler-operator-fbc-4-18
+    appstudio.openshift.io/component: secondary-scheduler-operator-fbc-4-18
     pipelines.appstudio.openshift.io/type: build
-  name: secondary-scheduler-operator-fbc-4-17-on-push
+  name: secondary-scheduler-operator-fbc-4-18-on-pull-request
   namespace: crt-nshift-secondary-tenant
 spec:
   params:
@@ -22,11 +24,13 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-fbc-4-17:{{revision}}
+    value: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-fbc-4-18:on-pr-{{revision}}
+  - name: image-expires-after
+    value: 5d
   - name: dockerfile
     value: catalog.Dockerfile
   - name: path-context
-    value: v4.17
+    value: v4.18
   - name: build-platforms
     value:
     - linux/x86_64
@@ -361,8 +365,7 @@ spec:
         - name: name
           value: rpms-signature-scan
         - name: bundle
-          value: >-
-            quay.io/konflux-ci/tekton-catalog/task-rpms-signature-scan:0.2@sha256:e603b3df510aeefeaa12e8778c4642b21743cb0ae68704359dc7ffd2814249d2
+          value: quay.io/konflux-ci/tekton-catalog/task-rpms-signature-scan:0.2@sha256:e603b3df510aeefeaa12e8778c4642b21743cb0ae68704359dc7ffd2814249d2
         - name: kind
           value: task
         resolver: bundles
@@ -370,7 +373,7 @@ spec:
       - input: $(params.skip-checks)
         operator: in
         values:
-        - 'false'
+        - "false"
     workspaces:
     - name: workspace
     - name: git-auth
