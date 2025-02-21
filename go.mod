@@ -15,7 +15,7 @@ require (
 	go.opentelemetry.io/otel v1.28.0 // indirect; needed by go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.0
 	go.opentelemetry.io/otel/sdk v1.28.0 // indirect; needed by go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.0
 	golang.org/x/crypto v0.31.0 // indirect; to address CVE-2024-45337
-	golang.org/x/net v0.29.0 // indirect; to address GO-2024-3333
+	golang.org/x/net v0.33.0 // indirect; to address GO-2024-3333
 	k8s.io/api v0.31.1
 	k8s.io/apiextensions-apiserver v0.31.1
 	k8s.io/apimachinery v0.31.1
