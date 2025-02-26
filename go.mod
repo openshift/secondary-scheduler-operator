@@ -6,7 +6,7 @@ toolchain go1.22.1
 
 require (
 	github.com/openshift/api v0.0.0-20241015143726-5afd6c371db4
-	github.com/openshift/build-machinery-go v0.0.0-20240910153727-5725581bdf8f
+	github.com/openshift/build-machinery-go v0.0.0-20250211133638-a00a772ae1a2
 	github.com/openshift/client-go v0.0.0-20241001162912-da6d55e4611f
 	github.com/openshift/library-go v0.0.0-20241015180910-c0f6295482a7
 	github.com/prometheus/client_golang v1.19.1
@@ -23,6 +23,8 @@ require (
 	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
 	sigs.k8s.io/controller-tools v0.11.2
 )
+
+require sigs.k8s.io/structured-merge-diff/v4 v4.4.1
 
 require (
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
@@ -119,6 +121,5 @@ require (
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.30.3 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/kube-storage-version-migrator v0.0.6-0.20230721195810-5c8923c5ff96 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
