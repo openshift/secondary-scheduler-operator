@@ -8,10 +8,12 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/utils/clock"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
+	"github.com/openshift/library-go/pkg/apiserver/jsonpatch"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
 
 	applyconfiguration "github.com/openshift/client-go/operator/applyconfigurations/operator/v1"
@@ -168,4 +170,13 @@ func (c *SecondarySchedulerClient) ApplyOperatorStatus(ctx context.Context, fiel
 	}
 
 	return nil
+}
+
+func (c *SecondarySchedulerClient) PatchOperatorStatus(ctx context.Context, jsonPatch *jsonpatch.PatchSet) (err error) {
+	jsonPatchBytes, err := jsonPatch.Marshal()
+	if err != nil {
+		return err
+	}
+	_, err = c.OperatorClient.SecondarySchedulers(OperatorNamespace).Patch(ctx, OperatorConfigName, types.JSONPatchType, jsonPatchBytes, metav1.PatchOptions{}, "/status")
+	return err
 }
