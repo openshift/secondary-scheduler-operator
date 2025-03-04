@@ -16,6 +16,7 @@ import (
 	k8sclient "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/clock"
 
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
@@ -49,7 +50,7 @@ func TestMain(m *testing.M) {
 	apiExtClient := getApiExtensionKubeClient()
 	ssClient := getSecondarySchedulerClient()
 
-	eventRecorder := events.NewKubeRecorder(kubeClient.CoreV1().Events("default"), "test-e2e", &corev1.ObjectReference{})
+	eventRecorder := events.NewKubeRecorder(kubeClient.CoreV1().Events("default"), "test-e2e", &corev1.ObjectReference{}, clock.RealClock{})
 
 	ctx, cancelFnc := context.WithCancel(context.TODO())
 	defer cancelFnc()
