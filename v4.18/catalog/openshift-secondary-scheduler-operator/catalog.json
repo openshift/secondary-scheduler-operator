@@ -34,7 +34,6 @@
         },
         {
             "name": "secondaryscheduleroperator.v1.2.0",
-            "replaces": "secondaryscheduleroperator.v1.1.2",
             "skipRange": ">=1.1.0 <1.2.0"
         },
         {
