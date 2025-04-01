@@ -2,7 +2,7 @@
 apiVersion: operator.openshift.io/v1alpha1
 kind: ImageDigestMirrorSet
 metadata:
-  name: mirror-set-run-once-duration-override-operator-4-18
+  name: mirror-set-secondary-scheduler-operator-4-18
 spec:
   imageDigestMirrors:
     - mirrors:
