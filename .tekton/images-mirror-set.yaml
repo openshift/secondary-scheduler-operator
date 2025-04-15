@@ -9,5 +9,11 @@ spec:
         - quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-bundle-4-18
       source: registry.stage.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle
     - mirrors:
+        - quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-bundle-4-18
+      source: registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle
+    - mirrors:
         - quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-4-18
       source: registry.stage.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator
+    - mirrors:
+        - quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-4-18
+      source: registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator
