@@ -463,7 +463,8 @@ spec:
       optional: true
     - name: netrc
       optional: true
-  taskRunTemplate: {}
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-secondary-scheduler-operator-bundle-4-13
   workspaces:
   - name: git-auth
     secret:
