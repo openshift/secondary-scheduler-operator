@@ -361,8 +361,7 @@ spec:
         - name: name
           value: rpms-signature-scan
         - name: bundle
-          value: >-
-            quay.io/konflux-ci/tekton-catalog/task-rpms-signature-scan:0.2@sha256:d00d159c370e3c99447516970c316ef57dfd27c29e0ce3cff50727c9c40936d8
+          value: quay.io/konflux-ci/tekton-catalog/task-rpms-signature-scan:0.2@sha256:d00d159c370e3c99447516970c316ef57dfd27c29e0ce3cff50727c9c40936d8
         - name: kind
           value: task
         resolver: bundles
@@ -370,14 +369,15 @@ spec:
       - input: $(params.skip-checks)
         operator: in
         values:
-        - 'false'
+        - "false"
     workspaces:
     - name: workspace
     - name: git-auth
       optional: true
     - name: netrc
       optional: true
-  taskRunTemplate: {}
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-secondary-scheduler-operator-fbc-4-17
   workspaces:
   - name: workspace
     volumeClaimTemplate:
