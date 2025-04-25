@@ -114,7 +114,7 @@ spec:
         set of values is determined by the configuration of the multi-platform-controller.
       name: build-platforms
       type: array
-    - default: "snyk-secret"
+    - default: snyk-secret
       description: Snyk Token Secret Name
       name: snyk-secret
     results:
@@ -485,7 +485,8 @@ spec:
       optional: true
     - name: netrc
       optional: true
-  taskRunTemplate: {}
+  taskRunTemplate:
+    serviceAccountName: build-pipeline-secondary-scheduler-operator-4-13
   workspaces:
   - name: git-auth
     secret:
