@@ -6,7 +6,7 @@ require (
 	github.com/openshift/api v0.0.0-20231019105552-3a98ec045aeb
 	github.com/openshift/build-machinery-go v0.0.0-20230816154005-5a38e1bfd880
 	github.com/openshift/client-go v0.0.0-20231018150822-6e226e2825a6
-	github.com/openshift/library-go v0.0.0-20231017173800-126f85ed0cc7
+	github.com/openshift/library-go 7de7fae45594
 	github.com/prometheus/client_golang v1.16.0
 	github.com/spf13/cobra v1.7.0
 	google.golang.org/protobuf v1.33.0 // indirect; to improve error handling
