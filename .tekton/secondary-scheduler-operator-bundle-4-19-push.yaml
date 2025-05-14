@@ -589,7 +589,7 @@ spec:
     - name: netrc
       optional: true
   taskRunTemplate:
-    serviceAccountName: build-pipeline-kube-descheduler-operator-bundle-4-19
+    serviceAccountName: build-pipeline-secondary-scheduler-operator-bundle-4-19
   workspaces:
   - name: git-auth
     secret:
