@@ -7,8 +7,9 @@ metadata:
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
     pipelinesascode.tekton.dev/cancel-in-progress: "false"
     pipelinesascode.tekton.dev/max-keep-runs: "3"
-    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch == "release-4.19"
-  creationTimestamp:
+    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch
+      == "release-4.19"
+  creationTimestamp: null
   labels:
     appstudio.openshift.io/application: secondary-scheduler-operator-4-19
     appstudio.openshift.io/component: secondary-scheduler-operator-4-19
@@ -23,6 +24,9 @@ spec:
     value: '{{revision}}'
   - name: output-image
     value: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-4-19:{{revision}}
+  - name: build-platforms
+    value:
+    - linux/x86_64
   - name: dockerfile
     value: Dockerfile
   pipelineSpec:
@@ -74,7 +78,7 @@ spec:
       description: Skip checks against built image
       name: skip-checks
       type: string
-    - default: "true"
+    - default: "false"
       description: Execute the build with network isolation
       name: hermetic
       type: string
@@ -86,7 +90,7 @@ spec:
       description: Image tag expiration time, time values could be something like
         1h, 2d, 3w for hours, days, and weeks, respectively.
       name: image-expires-after
-    - default: "true"
+    - default: "false"
       description: Build a source image.
       name: build-source-image
       type: string
@@ -109,9 +113,6 @@ spec:
       type: string
     - default:
       - linux/x86_64
-      - linux/arm64
-      - linux/ppc64le
-      - linux/s390x
       description: List of platforms to build the container images on. The available
         set of values is determined by the configuration of the multi-platform-controller.
       name: build-platforms
@@ -457,7 +458,7 @@ spec:
         - name: name
           value: sast-coverity-check-oci-ta
         - name: bundle
-          value: quay.io/konflux-ci/tekton-catalog/task-sast-coverity-check-oci-ta:0.3@sha256:a9a3c472624d0598c28aaa67319e74a807ac1948946002dd7b181d200e672b8b
+          value: quay.io/konflux-ci/tekton-catalog/task-sast-coverity-check-oci-ta:0.3@sha256:87af64576088ba68f2a5b89998b7ae9e92d7e4f039274e4be6000eff6ce0d95d
         - name: kind
           value: task
         resolver: bundles
@@ -610,4 +611,4 @@ spec:
   - name: git-auth
     secret:
       secretName: '{{ git_auth_secret }}'
-  status: {}
+status: {}
