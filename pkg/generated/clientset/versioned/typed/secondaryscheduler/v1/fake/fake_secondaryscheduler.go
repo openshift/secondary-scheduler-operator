@@ -17,179 +17,35 @@ limitations under the License.
 package fake
 
 import (
-	"context"
-	json "encoding/json"
-	"fmt"
-
 	v1 "github.com/openshift/secondary-scheduler-operator/pkg/apis/secondaryscheduler/v1"
 	secondaryschedulerv1 "github.com/openshift/secondary-scheduler-operator/pkg/generated/applyconfiguration/secondaryscheduler/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	typedsecondaryschedulerv1 "github.com/openshift/secondary-scheduler-operator/pkg/generated/clientset/versioned/typed/secondaryscheduler/v1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeSecondarySchedulers implements SecondarySchedulerInterface
-type FakeSecondarySchedulers struct {
+// fakeSecondarySchedulers implements SecondarySchedulerInterface
+type fakeSecondarySchedulers struct {
+	*gentype.FakeClientWithListAndApply[*v1.SecondaryScheduler, *v1.SecondarySchedulerList, *secondaryschedulerv1.SecondarySchedulerApplyConfiguration]
 	Fake *FakeSecondaryschedulersV1
-	ns   string
 }
 
-var secondaryschedulersResource = v1.SchemeGroupVersion.WithResource("secondaryschedulers")
-
-var secondaryschedulersKind = v1.SchemeGroupVersion.WithKind("SecondaryScheduler")
-
-// Get takes name of the secondaryScheduler, and returns the corresponding secondaryScheduler object, and an error if there is any.
-func (c *FakeSecondarySchedulers) Get(ctx context.Context, name string, options metav1.GetOptions) (result *v1.SecondaryScheduler, err error) {
-	emptyResult := &v1.SecondaryScheduler{}
-	obj, err := c.Fake.
-		Invokes(testing.NewGetActionWithOptions(secondaryschedulersResource, c.ns, name, options), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
+func newFakeSecondarySchedulers(fake *FakeSecondaryschedulersV1, namespace string) typedsecondaryschedulerv1.SecondarySchedulerInterface {
+	return &fakeSecondarySchedulers{
+		gentype.NewFakeClientWithListAndApply[*v1.SecondaryScheduler, *v1.SecondarySchedulerList, *secondaryschedulerv1.SecondarySchedulerApplyConfiguration](
+			fake.Fake,
+			namespace,
+			v1.SchemeGroupVersion.WithResource("secondaryschedulers"),
+			v1.SchemeGroupVersion.WithKind("SecondaryScheduler"),
+			func() *v1.SecondaryScheduler { return &v1.SecondaryScheduler{} },
+			func() *v1.SecondarySchedulerList { return &v1.SecondarySchedulerList{} },
+			func(dst, src *v1.SecondarySchedulerList) { dst.ListMeta = src.ListMeta },
+			func(list *v1.SecondarySchedulerList) []*v1.SecondaryScheduler {
+				return gentype.ToPointerSlice(list.Items)
+			},
+			func(list *v1.SecondarySchedulerList, items []*v1.SecondaryScheduler) {
+				list.Items = gentype.FromPointerSlice(items)
+			},
+		),
+		fake,
 	}
-	return obj.(*v1.SecondaryScheduler), err
-}
-
-// List takes label and field selectors, and returns the list of SecondarySchedulers that match those selectors.
-func (c *FakeSecondarySchedulers) List(ctx context.Context, opts metav1.ListOptions) (result *v1.SecondarySchedulerList, err error) {
-	emptyResult := &v1.SecondarySchedulerList{}
-	obj, err := c.Fake.
-		Invokes(testing.NewListActionWithOptions(secondaryschedulersResource, secondaryschedulersKind, c.ns, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1.SecondarySchedulerList{ListMeta: obj.(*v1.SecondarySchedulerList).ListMeta}
-	for _, item := range obj.(*v1.SecondarySchedulerList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested secondarySchedulers.
-func (c *FakeSecondarySchedulers) Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewWatchActionWithOptions(secondaryschedulersResource, c.ns, opts))
-
-}
-
-// Create takes the representation of a secondaryScheduler and creates it.  Returns the server's representation of the secondaryScheduler, and an error, if there is any.
-func (c *FakeSecondarySchedulers) Create(ctx context.Context, secondaryScheduler *v1.SecondaryScheduler, opts metav1.CreateOptions) (result *v1.SecondaryScheduler, err error) {
-	emptyResult := &v1.SecondaryScheduler{}
-	obj, err := c.Fake.
-		Invokes(testing.NewCreateActionWithOptions(secondaryschedulersResource, c.ns, secondaryScheduler, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.SecondaryScheduler), err
-}
-
-// Update takes the representation of a secondaryScheduler and updates it. Returns the server's representation of the secondaryScheduler, and an error, if there is any.
-func (c *FakeSecondarySchedulers) Update(ctx context.Context, secondaryScheduler *v1.SecondaryScheduler, opts metav1.UpdateOptions) (result *v1.SecondaryScheduler, err error) {
-	emptyResult := &v1.SecondaryScheduler{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateActionWithOptions(secondaryschedulersResource, c.ns, secondaryScheduler, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.SecondaryScheduler), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeSecondarySchedulers) UpdateStatus(ctx context.Context, secondaryScheduler *v1.SecondaryScheduler, opts metav1.UpdateOptions) (result *v1.SecondaryScheduler, err error) {
-	emptyResult := &v1.SecondaryScheduler{}
-	obj, err := c.Fake.
-		Invokes(testing.NewUpdateSubresourceActionWithOptions(secondaryschedulersResource, "status", c.ns, secondaryScheduler, opts), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.SecondaryScheduler), err
-}
-
-// Delete takes name of the secondaryScheduler and deletes it. Returns an error if one occurs.
-func (c *FakeSecondarySchedulers) Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewDeleteActionWithOptions(secondaryschedulersResource, c.ns, name, opts), &v1.SecondaryScheduler{})
-
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeSecondarySchedulers) DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error {
-	action := testing.NewDeleteCollectionActionWithOptions(secondaryschedulersResource, c.ns, opts, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1.SecondarySchedulerList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched secondaryScheduler.
-func (c *FakeSecondarySchedulers) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.SecondaryScheduler, err error) {
-	emptyResult := &v1.SecondaryScheduler{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(secondaryschedulersResource, c.ns, name, pt, data, opts, subresources...), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.SecondaryScheduler), err
-}
-
-// Apply takes the given apply declarative configuration, applies it and returns the applied secondaryScheduler.
-func (c *FakeSecondarySchedulers) Apply(ctx context.Context, secondaryScheduler *secondaryschedulerv1.SecondarySchedulerApplyConfiguration, opts metav1.ApplyOptions) (result *v1.SecondaryScheduler, err error) {
-	if secondaryScheduler == nil {
-		return nil, fmt.Errorf("secondaryScheduler provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(secondaryScheduler)
-	if err != nil {
-		return nil, err
-	}
-	name := secondaryScheduler.Name
-	if name == nil {
-		return nil, fmt.Errorf("secondaryScheduler.Name must be provided to Apply")
-	}
-	emptyResult := &v1.SecondaryScheduler{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(secondaryschedulersResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions()), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.SecondaryScheduler), err
-}
-
-// ApplyStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-func (c *FakeSecondarySchedulers) ApplyStatus(ctx context.Context, secondaryScheduler *secondaryschedulerv1.SecondarySchedulerApplyConfiguration, opts metav1.ApplyOptions) (result *v1.SecondaryScheduler, err error) {
-	if secondaryScheduler == nil {
-		return nil, fmt.Errorf("secondaryScheduler provided to Apply must not be nil")
-	}
-	data, err := json.Marshal(secondaryScheduler)
-	if err != nil {
-		return nil, err
-	}
-	name := secondaryScheduler.Name
-	if name == nil {
-		return nil, fmt.Errorf("secondaryScheduler.Name must be provided to Apply")
-	}
-	emptyResult := &v1.SecondaryScheduler{}
-	obj, err := c.Fake.
-		Invokes(testing.NewPatchSubresourceActionWithOptions(secondaryschedulersResource, c.ns, *name, types.ApplyPatchType, data, opts.ToPatchOptions(), "status"), emptyResult)
-
-	if obj == nil {
-		return emptyResult, err
-	}
-	return obj.(*v1.SecondaryScheduler), err
 }

@@ -17,13 +17,13 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	secondaryschedulerv1 "github.com/openshift/secondary-scheduler-operator/pkg/apis/secondaryscheduler/v1"
+	apissecondaryschedulerv1 "github.com/openshift/secondary-scheduler-operator/pkg/apis/secondaryscheduler/v1"
 	versioned "github.com/openshift/secondary-scheduler-operator/pkg/generated/clientset/versioned"
 	internalinterfaces "github.com/openshift/secondary-scheduler-operator/pkg/generated/informers/externalversions/internalinterfaces"
-	v1 "github.com/openshift/secondary-scheduler-operator/pkg/generated/listers/secondaryscheduler/v1"
+	secondaryschedulerv1 "github.com/openshift/secondary-scheduler-operator/pkg/generated/listers/secondaryscheduler/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -34,7 +34,7 @@ import (
 // SecondarySchedulers.
 type SecondarySchedulerInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1.SecondarySchedulerLister
+	Lister() secondaryschedulerv1.SecondarySchedulerLister
 }
 
 type secondarySchedulerInformer struct {
@@ -69,7 +69,7 @@ func NewFilteredSecondarySchedulerInformer(client versioned.Interface, namespace
 				return client.SecondaryschedulersV1().SecondarySchedulers(namespace).Watch(context.TODO(), options)
 			},
 		},
-		&secondaryschedulerv1.SecondaryScheduler{},
+		&apissecondaryschedulerv1.SecondaryScheduler{},
 		resyncPeriod,
 		indexers,
 	)
@@ -80,9 +80,9 @@ func (f *secondarySchedulerInformer) defaultInformer(client versioned.Interface,
 }
 
 func (f *secondarySchedulerInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&secondaryschedulerv1.SecondaryScheduler{}, f.defaultInformer)
+	return f.factory.InformerFor(&apissecondaryschedulerv1.SecondaryScheduler{}, f.defaultInformer)
 }
 
-func (f *secondarySchedulerInformer) Lister() v1.SecondarySchedulerLister {
-	return v1.NewSecondarySchedulerLister(f.Informer().GetIndexer())
+func (f *secondarySchedulerInformer) Lister() secondaryschedulerv1.SecondarySchedulerLister {
+	return secondaryschedulerv1.NewSecondarySchedulerLister(f.Informer().GetIndexer())
 }

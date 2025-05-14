@@ -17,17 +17,17 @@ limitations under the License.
 package v1
 
 import (
-	operatorv1 "github.com/openshift/api/operator/v1"
-	v1 "github.com/openshift/client-go/operator/applyconfigurations/operator/v1"
+	apioperatorv1 "github.com/openshift/api/operator/v1"
+	operatorv1 "github.com/openshift/client-go/operator/applyconfigurations/operator/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
 // SecondarySchedulerSpecApplyConfiguration represents a declarative configuration of the SecondarySchedulerSpec type for use
 // with apply.
 type SecondarySchedulerSpecApplyConfiguration struct {
-	v1.OperatorSpecApplyConfiguration `json:",inline"`
-	SchedulerConfig                   *string `json:"schedulerConfig,omitempty"`
-	SchedulerImage                    *string `json:"schedulerImage,omitempty"`
+	operatorv1.OperatorSpecApplyConfiguration `json:",inline"`
+	SchedulerConfig                           *string `json:"schedulerConfig,omitempty"`
+	SchedulerImage                            *string `json:"schedulerImage,omitempty"`
 }
 
 // SecondarySchedulerSpecApplyConfiguration constructs a declarative configuration of the SecondarySchedulerSpec type for use with
@@ -39,24 +39,24 @@ func SecondarySchedulerSpec() *SecondarySchedulerSpecApplyConfiguration {
 // WithManagementState sets the ManagementState field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the ManagementState field is set to the value of the last call.
-func (b *SecondarySchedulerSpecApplyConfiguration) WithManagementState(value operatorv1.ManagementState) *SecondarySchedulerSpecApplyConfiguration {
-	b.ManagementState = &value
+func (b *SecondarySchedulerSpecApplyConfiguration) WithManagementState(value apioperatorv1.ManagementState) *SecondarySchedulerSpecApplyConfiguration {
+	b.OperatorSpecApplyConfiguration.ManagementState = &value
 	return b
 }
 
 // WithLogLevel sets the LogLevel field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the LogLevel field is set to the value of the last call.
-func (b *SecondarySchedulerSpecApplyConfiguration) WithLogLevel(value operatorv1.LogLevel) *SecondarySchedulerSpecApplyConfiguration {
-	b.LogLevel = &value
+func (b *SecondarySchedulerSpecApplyConfiguration) WithLogLevel(value apioperatorv1.LogLevel) *SecondarySchedulerSpecApplyConfiguration {
+	b.OperatorSpecApplyConfiguration.LogLevel = &value
 	return b
 }
 
 // WithOperatorLogLevel sets the OperatorLogLevel field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the OperatorLogLevel field is set to the value of the last call.
-func (b *SecondarySchedulerSpecApplyConfiguration) WithOperatorLogLevel(value operatorv1.LogLevel) *SecondarySchedulerSpecApplyConfiguration {
-	b.OperatorLogLevel = &value
+func (b *SecondarySchedulerSpecApplyConfiguration) WithOperatorLogLevel(value apioperatorv1.LogLevel) *SecondarySchedulerSpecApplyConfiguration {
+	b.OperatorSpecApplyConfiguration.OperatorLogLevel = &value
 	return b
 }
 
@@ -64,7 +64,7 @@ func (b *SecondarySchedulerSpecApplyConfiguration) WithOperatorLogLevel(value op
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the UnsupportedConfigOverrides field is set to the value of the last call.
 func (b *SecondarySchedulerSpecApplyConfiguration) WithUnsupportedConfigOverrides(value runtime.RawExtension) *SecondarySchedulerSpecApplyConfiguration {
-	b.UnsupportedConfigOverrides = &value
+	b.OperatorSpecApplyConfiguration.UnsupportedConfigOverrides = &value
 	return b
 }
 
@@ -72,7 +72,7 @@ func (b *SecondarySchedulerSpecApplyConfiguration) WithUnsupportedConfigOverride
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the ObservedConfig field is set to the value of the last call.
 func (b *SecondarySchedulerSpecApplyConfiguration) WithObservedConfig(value runtime.RawExtension) *SecondarySchedulerSpecApplyConfiguration {
-	b.ObservedConfig = &value
+	b.OperatorSpecApplyConfiguration.ObservedConfig = &value
 	return b
 }
 
