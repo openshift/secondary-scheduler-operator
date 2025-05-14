@@ -27,7 +27,7 @@ type FakeSecondaryschedulersV1 struct {
 }
 
 func (c *FakeSecondaryschedulersV1) SecondarySchedulers(namespace string) v1.SecondarySchedulerInterface {
-	return &FakeSecondarySchedulers{c, namespace}
+	return newFakeSecondarySchedulers(c, namespace)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

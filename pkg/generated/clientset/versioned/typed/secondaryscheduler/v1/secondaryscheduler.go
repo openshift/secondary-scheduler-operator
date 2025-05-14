@@ -17,10 +17,10 @@ limitations under the License.
 package v1
 
 import (
-	"context"
+	context "context"
 
-	v1 "github.com/openshift/secondary-scheduler-operator/pkg/apis/secondaryscheduler/v1"
-	secondaryschedulerv1 "github.com/openshift/secondary-scheduler-operator/pkg/generated/applyconfiguration/secondaryscheduler/v1"
+	secondaryschedulerv1 "github.com/openshift/secondary-scheduler-operator/pkg/apis/secondaryscheduler/v1"
+	applyconfigurationsecondaryschedulerv1 "github.com/openshift/secondary-scheduler-operator/pkg/generated/applyconfiguration/secondaryscheduler/v1"
 	scheme "github.com/openshift/secondary-scheduler-operator/pkg/generated/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
@@ -36,36 +36,39 @@ type SecondarySchedulersGetter interface {
 
 // SecondarySchedulerInterface has methods to work with SecondaryScheduler resources.
 type SecondarySchedulerInterface interface {
-	Create(ctx context.Context, secondaryScheduler *v1.SecondaryScheduler, opts metav1.CreateOptions) (*v1.SecondaryScheduler, error)
-	Update(ctx context.Context, secondaryScheduler *v1.SecondaryScheduler, opts metav1.UpdateOptions) (*v1.SecondaryScheduler, error)
+	Create(ctx context.Context, secondaryScheduler *secondaryschedulerv1.SecondaryScheduler, opts metav1.CreateOptions) (*secondaryschedulerv1.SecondaryScheduler, error)
+	Update(ctx context.Context, secondaryScheduler *secondaryschedulerv1.SecondaryScheduler, opts metav1.UpdateOptions) (*secondaryschedulerv1.SecondaryScheduler, error)
 	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-	UpdateStatus(ctx context.Context, secondaryScheduler *v1.SecondaryScheduler, opts metav1.UpdateOptions) (*v1.SecondaryScheduler, error)
+	UpdateStatus(ctx context.Context, secondaryScheduler *secondaryschedulerv1.SecondaryScheduler, opts metav1.UpdateOptions) (*secondaryschedulerv1.SecondaryScheduler, error)
 	Delete(ctx context.Context, name string, opts metav1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts metav1.DeleteOptions, listOpts metav1.ListOptions) error
-	Get(ctx context.Context, name string, opts metav1.GetOptions) (*v1.SecondaryScheduler, error)
-	List(ctx context.Context, opts metav1.ListOptions) (*v1.SecondarySchedulerList, error)
+	Get(ctx context.Context, name string, opts metav1.GetOptions) (*secondaryschedulerv1.SecondaryScheduler, error)
+	List(ctx context.Context, opts metav1.ListOptions) (*secondaryschedulerv1.SecondarySchedulerList, error)
 	Watch(ctx context.Context, opts metav1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *v1.SecondaryScheduler, err error)
-	Apply(ctx context.Context, secondaryScheduler *secondaryschedulerv1.SecondarySchedulerApplyConfiguration, opts metav1.ApplyOptions) (result *v1.SecondaryScheduler, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (result *secondaryschedulerv1.SecondaryScheduler, err error)
+	Apply(ctx context.Context, secondaryScheduler *applyconfigurationsecondaryschedulerv1.SecondarySchedulerApplyConfiguration, opts metav1.ApplyOptions) (result *secondaryschedulerv1.SecondaryScheduler, err error)
 	// Add a +genclient:noStatus comment above the type to avoid generating ApplyStatus().
-	ApplyStatus(ctx context.Context, secondaryScheduler *secondaryschedulerv1.SecondarySchedulerApplyConfiguration, opts metav1.ApplyOptions) (result *v1.SecondaryScheduler, err error)
+	ApplyStatus(ctx context.Context, secondaryScheduler *applyconfigurationsecondaryschedulerv1.SecondarySchedulerApplyConfiguration, opts metav1.ApplyOptions) (result *secondaryschedulerv1.SecondaryScheduler, err error)
 	SecondarySchedulerExpansion
 }
 
 // secondarySchedulers implements SecondarySchedulerInterface
 type secondarySchedulers struct {
-	*gentype.ClientWithListAndApply[*v1.SecondaryScheduler, *v1.SecondarySchedulerList, *secondaryschedulerv1.SecondarySchedulerApplyConfiguration]
+	*gentype.ClientWithListAndApply[*secondaryschedulerv1.SecondaryScheduler, *secondaryschedulerv1.SecondarySchedulerList, *applyconfigurationsecondaryschedulerv1.SecondarySchedulerApplyConfiguration]
 }
 
 // newSecondarySchedulers returns a SecondarySchedulers
 func newSecondarySchedulers(c *SecondaryschedulersV1Client, namespace string) *secondarySchedulers {
 	return &secondarySchedulers{
-		gentype.NewClientWithListAndApply[*v1.SecondaryScheduler, *v1.SecondarySchedulerList, *secondaryschedulerv1.SecondarySchedulerApplyConfiguration](
+		gentype.NewClientWithListAndApply[*secondaryschedulerv1.SecondaryScheduler, *secondaryschedulerv1.SecondarySchedulerList, *applyconfigurationsecondaryschedulerv1.SecondarySchedulerApplyConfiguration](
 			"secondaryschedulers",
 			c.RESTClient(),
 			scheme.ParameterCodec,
 			namespace,
-			func() *v1.SecondaryScheduler { return &v1.SecondaryScheduler{} },
-			func() *v1.SecondarySchedulerList { return &v1.SecondarySchedulerList{} }),
+			func() *secondaryschedulerv1.SecondaryScheduler { return &secondaryschedulerv1.SecondaryScheduler{} },
+			func() *secondaryschedulerv1.SecondarySchedulerList {
+				return &secondaryschedulerv1.SecondarySchedulerList{}
+			},
+		),
 	}
 }

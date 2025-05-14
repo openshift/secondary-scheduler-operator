@@ -17,10 +17,10 @@ limitations under the License.
 package v1
 
 import (
-	v1 "github.com/openshift/secondary-scheduler-operator/pkg/apis/secondaryscheduler/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/listers"
-	"k8s.io/client-go/tools/cache"
+	secondaryschedulerv1 "github.com/openshift/secondary-scheduler-operator/pkg/apis/secondaryscheduler/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // SecondarySchedulerLister helps list SecondarySchedulers.
@@ -28,7 +28,7 @@ import (
 type SecondarySchedulerLister interface {
 	// List lists all SecondarySchedulers in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.SecondaryScheduler, err error)
+	List(selector labels.Selector) (ret []*secondaryschedulerv1.SecondaryScheduler, err error)
 	// SecondarySchedulers returns an object that can list and get SecondarySchedulers.
 	SecondarySchedulers(namespace string) SecondarySchedulerNamespaceLister
 	SecondarySchedulerListerExpansion
@@ -36,17 +36,17 @@ type SecondarySchedulerLister interface {
 
 // secondarySchedulerLister implements the SecondarySchedulerLister interface.
 type secondarySchedulerLister struct {
-	listers.ResourceIndexer[*v1.SecondaryScheduler]
+	listers.ResourceIndexer[*secondaryschedulerv1.SecondaryScheduler]
 }
 
 // NewSecondarySchedulerLister returns a new SecondarySchedulerLister.
 func NewSecondarySchedulerLister(indexer cache.Indexer) SecondarySchedulerLister {
-	return &secondarySchedulerLister{listers.New[*v1.SecondaryScheduler](indexer, v1.Resource("secondaryscheduler"))}
+	return &secondarySchedulerLister{listers.New[*secondaryschedulerv1.SecondaryScheduler](indexer, secondaryschedulerv1.Resource("secondaryscheduler"))}
 }
 
 // SecondarySchedulers returns an object that can list and get SecondarySchedulers.
 func (s *secondarySchedulerLister) SecondarySchedulers(namespace string) SecondarySchedulerNamespaceLister {
-	return secondarySchedulerNamespaceLister{listers.NewNamespaced[*v1.SecondaryScheduler](s.ResourceIndexer, namespace)}
+	return secondarySchedulerNamespaceLister{listers.NewNamespaced[*secondaryschedulerv1.SecondaryScheduler](s.ResourceIndexer, namespace)}
 }
 
 // SecondarySchedulerNamespaceLister helps list and get SecondarySchedulers.
@@ -54,15 +54,15 @@ func (s *secondarySchedulerLister) SecondarySchedulers(namespace string) Seconda
 type SecondarySchedulerNamespaceLister interface {
 	// List lists all SecondarySchedulers in the indexer for a given namespace.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1.SecondaryScheduler, err error)
+	List(selector labels.Selector) (ret []*secondaryschedulerv1.SecondaryScheduler, err error)
 	// Get retrieves the SecondaryScheduler from the indexer for a given namespace and name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1.SecondaryScheduler, error)
+	Get(name string) (*secondaryschedulerv1.SecondaryScheduler, error)
 	SecondarySchedulerNamespaceListerExpansion
 }
 
 // secondarySchedulerNamespaceLister implements the SecondarySchedulerNamespaceLister
 // interface.
 type secondarySchedulerNamespaceLister struct {
-	listers.ResourceIndexer[*v1.SecondaryScheduler]
+	listers.ResourceIndexer[*secondaryschedulerv1.SecondaryScheduler]
 }
