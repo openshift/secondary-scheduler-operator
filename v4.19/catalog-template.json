@@ -81,7 +81,8 @@
                         "secondaryscheduleroperator.v1.3.3",
                         "secondaryscheduleroperator.v1.3.4",
                         "secondaryscheduleroperator.v1.3.5",
-                        "secondaryscheduleroperator.v1.3.6"
+                        "secondaryscheduleroperator.v1.3.6",
+                        "secondaryscheduleroperator.v1.4.0"
                     ]
                 }
             ],
