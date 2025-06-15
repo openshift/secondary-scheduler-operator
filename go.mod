@@ -3,10 +3,10 @@ module github.com/openshift/secondary-scheduler-operator
 go 1.23.0
 
 require (
-	github.com/openshift/api v0.0.0-20250228110707-635291d6fdf1
+	github.com/openshift/api v0.0.0-20250320170726-75d64d71980b
 	github.com/openshift/build-machinery-go v0.0.0-20250211133638-a00a772ae1a2
 	github.com/openshift/client-go v0.0.0-20250131180035-f7ec47e2d87a
-	github.com/openshift/library-go v0.0.0-20250228164547-bad2d1bf3a37
+	github.com/openshift/library-go v0.0.0-20250609093359-ccdcf648dd95
 	github.com/prometheus/client_golang v1.19.1
 	github.com/spf13/cobra v1.8.1
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.53.0 // indirect; to address GO-2023-2331 (the code is not used but it will silence CVE warnings)
