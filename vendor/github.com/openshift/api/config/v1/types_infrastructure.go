@@ -100,6 +100,8 @@ type InfrastructureStatus struct {
 	// +kubebuilder:default=HighlyAvailable
 	// +openshift:validation:FeatureGateAwareEnum:featureGate="",enum=HighlyAvailable;SingleReplica;External
 	// +openshift:validation:FeatureGateAwareEnum:featureGate=HighlyAvailableArbiter,enum=HighlyAvailable;HighlyAvailableArbiter;SingleReplica;External
+	// +openshift:validation:FeatureGateAwareEnum:featureGate=DualReplica,enum=HighlyAvailable;SingleReplica;DualReplica;External
+	// +openshift:validation:FeatureGateAwareEnum:requiredFeatureGate=HighlyAvailableArbiter;DualReplica,enum=HighlyAvailable;HighlyAvailableArbiter;SingleReplica;DualReplica;External
 	ControlPlaneTopology TopologyMode `json:"controlPlaneTopology"`
 
 	// infrastructureTopology expresses the expectations for infrastructure services that do not run on control
@@ -141,6 +143,9 @@ const (
 
 	// "SingleReplica" is for operators to avoid spending resources for high-availability purpose.
 	SingleReplicaTopologyMode TopologyMode = "SingleReplica"
+
+	// "DualReplica" is for operators to configure for two node topology.
+	DualReplicaTopologyMode TopologyMode = "DualReplica"
 
 	// "External" indicates that the component is running externally to the cluster. When specified
 	// as the control plane topology, operators should avoid scheduling workloads to masters or assume
@@ -625,7 +630,7 @@ const (
 )
 
 // GCPServiceEndpointName is the name of the GCP Service Endpoint.
-// +kubebuilder:validation:Enum=Compute;Container;CloudResourceManager;DNS;File;IAM;ServiceUsage;Storage;TagManager
+// +kubebuilder:validation:Enum=Compute;Container;CloudResourceManager;DNS;File;IAM;ServiceUsage;Storage
 type GCPServiceEndpointName string
 
 const (
@@ -652,9 +657,6 @@ const (
 
 	// GCPServiceEndpointNameStorage is the name used for the GCP Storage Service endpoint.
 	GCPServiceEndpointNameStorage GCPServiceEndpointName = "Storage"
-
-	// GCPServiceEndpointNameTagManager is the name used for the GCP Tag Manager Service endpoint.
-	GCPServiceEndpointNameTagManager GCPServiceEndpointName = "TagManager"
 )
 
 // GCPServiceEndpoint store the configuration of a custom url to
@@ -750,7 +752,7 @@ type GCPPlatformStatus struct {
 	// The maximum number of endpoint overrides allowed is 9.
 	// +listType=map
 	// +listMapKey=name
-	// +kubebuilder:validation:MaxItems=9
+	// +kubebuilder:validation:MaxItems=8
 	// +kubebuilder:validation:XValidation:rule="self.all(x, self.exists_one(y, x.name == y.name))",message="only 1 endpoint override is permitted per GCP service name"
 	// +optional
 	// +openshift:enable:FeatureGate=GCPCustomAPIEndpoints
@@ -1003,7 +1005,6 @@ type BareMetalPlatformStatus struct {
 	// loadBalancer defines how the load balancer used by the cluster is configured.
 	// +default={"type": "OpenShiftManagedDefault"}
 	// +kubebuilder:default={"type": "OpenShiftManagedDefault"}
-	// +openshift:enable:FeatureGate=BareMetalLoadBalancer
 	// +optional
 	LoadBalancer *BareMetalPlatformLoadBalancer `json:"loadBalancer,omitempty"`
 
@@ -1217,7 +1218,6 @@ type OvirtPlatformStatus struct {
 	// loadBalancer defines how the load balancer used by the cluster is configured.
 	// +default={"type": "OpenShiftManagedDefault"}
 	// +kubebuilder:default={"type": "OpenShiftManagedDefault"}
-	// +openshift:enable:FeatureGate=BareMetalLoadBalancer
 	// +optional
 	LoadBalancer *OvirtPlatformLoadBalancer `json:"loadBalancer,omitempty"`
 }
@@ -1387,7 +1387,6 @@ type VSpherePlatformTopology struct {
 	// VSpherePlatformFailureDomainSpec.
 	// For example, for zone=zonea, region=region1, and infrastructure name=test,
 	// the template path would be calculated as /<datacenter>/vm/test-rhcos-region1-zonea.
-	// +openshift:enable:FeatureGate=VSphereControlPlaneMachineSet
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=2048
 	// +kubebuilder:validation:Pattern=`^/.*?/vm/.*?`
@@ -1555,8 +1554,7 @@ type VSpherePlatformSpec struct {
 	// + If VCenters is not defined use the existing cloud-config configmap defined
 	// + in openshift-config.
 	// +kubebuilder:validation:MinItems=0
-	// +openshift:validation:FeatureGateAwareMaxItems:featureGate="",maxItems=1
-	// +openshift:validation:FeatureGateAwareMaxItems:featureGate=VSphereMultiVCenters,maxItems=3
+	// +kubebuilder:validation:MaxItems=3
 	// +kubebuilder:validation:XValidation:rule="size(self) != size(oldSelf) ? size(oldSelf) == 0 && size(self) < 2 : true",message="vcenters cannot be added or removed once set"
 	// +listType=atomic
 	// +optional
@@ -1668,7 +1666,6 @@ type VSpherePlatformStatus struct {
 	// loadBalancer defines how the load balancer used by the cluster is configured.
 	// +default={"type": "OpenShiftManagedDefault"}
 	// +kubebuilder:default={"type": "OpenShiftManagedDefault"}
-	// +openshift:enable:FeatureGate=BareMetalLoadBalancer
 	// +optional
 	LoadBalancer *VSpherePlatformLoadBalancer `json:"loadBalancer,omitempty"`
 
@@ -1695,17 +1692,35 @@ type IBMCloudServiceEndpoint struct {
 
 	// url is fully qualified URI with scheme https, that overrides the default generated
 	// endpoint for a client.
-	// This must be provided and cannot be empty.
+	// This must be provided and cannot be empty. The path must follow the pattern
+	// /v[0,9]+ or /api/v[0,9]+
 	//
 	// +required
 	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:MaxLength=300
 	// +kubebuilder:validation:XValidation:rule="isURL(self)",message="url must be a valid absolute URL"
+	// +openshift:validation:FeatureGateAwareXValidation:featureGate=DyanmicServiceEndpointIBMCloud,rule="url(self).getScheme() == \"https\"",message="url must use https scheme"
+	// +openshift:validation:FeatureGateAwareXValidation:featureGate=DyanmicServiceEndpointIBMCloud,rule=`matches((url(self).getEscapedPath()), '^/(api/)?v[0-9]+/{0,1}$')`,message="url path must match /v[0,9]+ or /api/v[0,9]+"
 	URL string `json:"url"`
 }
 
 // IBMCloudPlatformSpec holds the desired state of the IBMCloud infrastructure provider.
 // This only includes fields that can be modified in the cluster.
-type IBMCloudPlatformSpec struct{}
+type IBMCloudPlatformSpec struct {
+	// serviceEndpoints is a list of custom endpoints which will override the default
+	// service endpoints of an IBM service. These endpoints are used by components
+	// within the cluster when trying to reach the IBM Cloud Services that have been
+	// overriden. The CCCMO reads in the IBMCloudPlatformSpec and validates each
+	// endpoint is resolvable. Once validated, the cloud config and IBMCloudPlatformStatus
+	// are updated to reflect the same custom endpoints.
+	// A maximum of 13 service endpoints overrides are supported.
+	// +kubebuilder:validation:MaxItems=13
+	// +listType=map
+	// +listMapKey=name
+	// +optional
+	// +openshift:enable:FeatureGate=DyanmicServiceEndpointIBMCloud
+	ServiceEndpoints []IBMCloudServiceEndpoint `json:"serviceEndpoints,omitempty"`
+}
 
 // IBMCloudPlatformStatus holds the current status of the IBMCloud infrastructure provider.
 type IBMCloudPlatformStatus struct {
@@ -1727,8 +1742,12 @@ type IBMCloudPlatformStatus struct {
 	DNSInstanceCRN string `json:"dnsInstanceCRN,omitempty"`
 
 	// serviceEndpoints is a list of custom endpoints which will override the default
-	// service endpoints of an IBM Cloud service. These endpoints are consumed by
-	// components within the cluster to reach the respective IBM Cloud Services.
+	// service endpoints of an IBM service. These endpoints are used by components
+	// within the cluster when trying to reach the IBM Cloud Services that have been
+	// overriden. The CCCMO reads in the IBMCloudPlatformSpec and validates each
+	// endpoint is resolvable. Once validated, the cloud config and IBMCloudPlatformStatus
+	// are updated to reflect the same custom endpoints.
+	// +openshift:validation:FeatureGateAwareMaxItems:featureGate=DyanmicServiceEndpointIBMCloud,maxItems=13
 	// +listType=map
 	// +listMapKey=name
 	// +optional
@@ -2064,7 +2083,6 @@ type NutanixPlatformStatus struct {
 	// loadBalancer defines how the load balancer used by the cluster is configured.
 	// +default={"type": "OpenShiftManagedDefault"}
 	// +kubebuilder:default={"type": "OpenShiftManagedDefault"}
-	// +openshift:enable:FeatureGate=BareMetalLoadBalancer
 	// +optional
 	LoadBalancer *NutanixPlatformLoadBalancer `json:"loadBalancer,omitempty"`
 }
