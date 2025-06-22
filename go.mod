@@ -23,7 +23,7 @@ require (
 	k8s.io/code-generator v0.31.1
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/utils v0.0.0-20240921022957-49e7df575cb6
-	sigs.k8s.io/controller-tools v0.11.2
+	sigs.k8s.io/controller-tools v0.18.0
 )
 
 require sigs.k8s.io/structured-merge-diff/v4 v4.4.1
