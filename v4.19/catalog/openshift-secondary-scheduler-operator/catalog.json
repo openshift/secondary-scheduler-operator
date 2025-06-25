@@ -1348,7 +1348,7 @@
     "schema": "olm.bundle",
     "name": "secondaryscheduleroperator.v1.4.1",
     "package": "openshift-secondary-scheduler-operator",
-    "image": "registry.stage.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:4b91a5877c79c2e8ad9355e31eeb5e5cffbe54b8a468bfbff05e1055796e2c6e",
+    "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:15003a7c834eb42d98e081d1a534c18fd038d627a7d07cb50278d2d0790c11b7",
     "properties": [
         {
             "type": "olm.gvk",
@@ -1373,7 +1373,7 @@
                     "capabilities": "Basic Install",
                     "categories": "OpenShift Optional",
                     "certified": "false",
-                    "containerImage": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator@sha256:a8ddaf9d2543a89d895fb01c962d1b5bb30bfa0a6f21e064e2b9d93bb954d74a",
+                    "containerImage": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator@sha256:fde3040d34d87c50375dce72d0a7ec827c11a37c2ce1649b7120124798e5b10c",
                     "createdAt": "2025/05/14",
                     "description": "Runs a secondary scheduler in an OpenShift cluster.",
                     "features.operators.openshift.io/cnf": "false",
@@ -1457,11 +1457,11 @@
     "relatedImages": [
         {
             "name": "secondary-scheduler-operator",
-            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator@sha256:a8ddaf9d2543a89d895fb01c962d1b5bb30bfa0a6f21e064e2b9d93bb954d74a"
+            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator@sha256:fde3040d34d87c50375dce72d0a7ec827c11a37c2ce1649b7120124798e5b10c"
         },
         {
             "name": "",
-            "image": "registry.stage.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:4b91a5877c79c2e8ad9355e31eeb5e5cffbe54b8a468bfbff05e1055796e2c6e"
+            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:15003a7c834eb42d98e081d1a534c18fd038d627a7d07cb50278d2d0790c11b7"
         }
     ]
 }
