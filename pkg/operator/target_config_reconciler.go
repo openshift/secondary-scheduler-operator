@@ -277,6 +277,9 @@ func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondarys
 
 	for i := range required.Spec.Template.Spec.Volumes {
 		for pat, configmap := range configmaps {
+			if required.Spec.Template.Spec.Volumes[i].ConfigMap == nil {
+				continue
+			}
 			if required.Spec.Template.Spec.Volumes[i].ConfigMap.Name == pat {
 				required.Spec.Template.Spec.Volumes[i].ConfigMap.Name = configmap
 				break

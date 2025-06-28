@@ -23,6 +23,8 @@ spec:
         - name: "etckubernetes"
           configMap:
             name: ${CONFIGMAP}
+        - name: tmp
+          emptyDir: {}
       restartPolicy: "Always"
       containers:
         - name: "secondary-scheduler"
@@ -39,11 +41,13 @@ spec:
             requests:
               cpu: 15m
               memory: 50Mi
-          command: 
+          command:
             - /bin/kube-scheduler
           args:
             - --config=/etc/kubernetes/config.yaml
           volumeMounts:
             - mountPath: "/etc/kubernetes"
               name: "etckubernetes"
+            - name: tmp
+              mountPath: "/tmp"
       serviceAccountName: "secondary-scheduler"
