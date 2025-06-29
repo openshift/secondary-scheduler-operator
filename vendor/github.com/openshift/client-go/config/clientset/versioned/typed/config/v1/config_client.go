@@ -3,10 +3,10 @@
 package v1
 
 import (
-	"net/http"
+	http "net/http"
 
-	v1 "github.com/openshift/api/config/v1"
-	"github.com/openshift/client-go/config/clientset/versioned/scheme"
+	configv1 "github.com/openshift/api/config/v1"
+	scheme "github.com/openshift/client-go/config/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 
@@ -15,6 +15,7 @@ type ConfigV1Interface interface {
 	APIServersGetter
 	AuthenticationsGetter
 	BuildsGetter
+	ClusterImagePoliciesGetter
 	ClusterOperatorsGetter
 	ClusterVersionsGetter
 	ConsolesGetter
@@ -23,6 +24,7 @@ type ConfigV1Interface interface {
 	ImagesGetter
 	ImageContentPoliciesGetter
 	ImageDigestMirrorSetsGetter
+	ImagePoliciesGetter
 	ImageTagMirrorSetsGetter
 	InfrastructuresGetter
 	IngressesGetter
@@ -50,6 +52,10 @@ func (c *ConfigV1Client) Authentications() AuthenticationInterface {
 
 func (c *ConfigV1Client) Builds() BuildInterface {
 	return newBuilds(c)
+}
+
+func (c *ConfigV1Client) ClusterImagePolicies() ClusterImagePolicyInterface {
+	return newClusterImagePolicies(c)
 }
 
 func (c *ConfigV1Client) ClusterOperators() ClusterOperatorInterface {
@@ -82,6 +88,10 @@ func (c *ConfigV1Client) ImageContentPolicies() ImageContentPolicyInterface {
 
 func (c *ConfigV1Client) ImageDigestMirrorSets() ImageDigestMirrorSetInterface {
 	return newImageDigestMirrorSets(c)
+}
+
+func (c *ConfigV1Client) ImagePolicies(namespace string) ImagePolicyInterface {
+	return newImagePolicies(c, namespace)
 }
 
 func (c *ConfigV1Client) ImageTagMirrorSets() ImageTagMirrorSetInterface {
@@ -169,10 +179,10 @@ func New(c rest.Interface) *ConfigV1Client {
 }
 
 func setConfigDefaults(config *rest.Config) error {
-	gv := v1.SchemeGroupVersion
+	gv := configv1.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
-	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+	config.NegotiatedSerializer = rest.CodecFactoryForGeneratedClient(scheme.Scheme, scheme.Codecs).WithoutConversion()
 
 	if config.UserAgent == "" {
 		config.UserAgent = rest.DefaultKubernetesUserAgent()
