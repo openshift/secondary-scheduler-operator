@@ -110,7 +110,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiserver v0.30.1 // indirect
 	k8s.io/component-base v0.30.1 // indirect
-	k8s.io/gengo/v2 v2.0.0-20240228010128-51d4e06bde70 // indirect
+	k8s.io/gengo/v2 v2.0.0-20250704022524-ddb642e17a28 // indirect
 	k8s.io/kms v0.30.1 // indirect
 	k8s.io/kube-aggregator v0.30.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
