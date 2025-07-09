@@ -54,8 +54,12 @@
                 },
                 {
                     "name": "secondaryscheduleroperator.v1.4.0",
+                    "skipRange": "\u003e=1.3.0 \u003c1.4.0"
+                },
+                {
+                    "name": "secondaryscheduleroperator.v1.4.1",
                     "replaces": "secondaryscheduleroperator.v1.3.0",
-                    "skipRange": "\u003e=1.3.0 \u003c1.4.0",
+                    "skipRange": "\u003e=1.3.0 \u003c1.4.1",
                     "skips": [
                         "secondaryscheduleroperator.v1.1.0",
                         "secondaryscheduleroperator.v1.1.1",
@@ -72,7 +76,13 @@
                         "secondaryscheduleroperator.v1.2.5",
                         "secondaryscheduleroperator.v1.2.6",
                         "secondaryscheduleroperator.v1.3.0",
-                        "secondaryscheduleroperator.v1.3.1"
+                        "secondaryscheduleroperator.v1.3.1",
+                        "secondaryscheduleroperator.v1.3.2",
+                        "secondaryscheduleroperator.v1.3.3",
+                        "secondaryscheduleroperator.v1.3.4",
+                        "secondaryscheduleroperator.v1.3.5",
+                        "secondaryscheduleroperator.v1.3.6",
+                        "secondaryscheduleroperator.v1.4.0"
                     ]
                 }
             ],
@@ -123,6 +133,10 @@
         {
             "schema": "olm.bundle",
             "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:c1dca4cb4d901a4ae7798e592fad162ada2c7ab99e8062d712e5415fc2fd5d00"
+        },
+        {
+            "schema": "olm.bundle",
+            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:3804fcb77893d9198527b4801e2a778bf612596c9a0b125a0f0f872b23138434"
         }
     ]
 }
