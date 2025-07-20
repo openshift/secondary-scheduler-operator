@@ -26,7 +26,7 @@ require (
 	sigs.k8s.io/controller-tools v0.11.2
 )
 
-require sigs.k8s.io/structured-merge-diff/v4 v4.4.1
+require sigs.k8s.io/structured-merge-diff/v6 v6.3.0
 
 require (
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
