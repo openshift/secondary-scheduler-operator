@@ -1,6 +1,8 @@
 module github.com/openshift/secondary-scheduler-operator
 
-go 1.20
+go 1.22.0
+
+toolchain go1.24.4
 
 require (
 	github.com/openshift/api v0.0.0-20231019105552-3a98ec045aeb
@@ -9,7 +11,7 @@ require (
 	github.com/openshift/library-go v0.0.0-20231017173800-126f85ed0cc7
 	github.com/prometheus/client_golang v1.16.0
 	github.com/spf13/cobra v1.7.0
-	google.golang.org/protobuf v1.33.0 // indirect; to improve error handling
+	google.golang.org/protobuf v1.36.6 // indirect; to improve error handling
 	k8s.io/api v0.28.15
 	k8s.io/apiextensions-apiserver v0.28.15
 	k8s.io/apimachinery v0.28.15
@@ -66,7 +68,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/profile v1.3.0 // indirect
-	github.com/prometheus/client_model v0.4.0 // indirect
+	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.44.0 // indirect
 	github.com/prometheus/procfs v0.10.1 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
