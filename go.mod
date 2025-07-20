@@ -22,7 +22,7 @@ require (
 	sigs.k8s.io/controller-tools v0.17.0
 )
 
-require sigs.k8s.io/structured-merge-diff/v4 v4.4.2
+require sigs.k8s.io/structured-merge-diff/v6 v6.3.0
 
 require (
 	cel.dev/expr v0.18.0 // indirect
