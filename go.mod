@@ -7,7 +7,7 @@ require (
 	github.com/openshift/build-machinery-go v0.0.0-20250602125535-1b6d00b8c37c
 	github.com/openshift/client-go v0.0.0-20250710075018-396b36f983ee
 	github.com/openshift/library-go v0.0.0-20250711143941-47604345e7ea
-	github.com/prometheus/client_golang v1.22.0
+	github.com/prometheus/client_golang v1.23.0
 	github.com/spf13/cobra v1.9.1
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.58.0 // indirect; to address GO-2023-2331 (the code is not used but it will silence CVE warnings)
 	go.opentelemetry.io/otel v1.33.0 // indirect; needed by go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.46.0
@@ -68,9 +68,9 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pkg/profile v1.7.0 // indirect
-	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.62.0 // indirect
-	github.com/prometheus/procfs v0.15.1 // indirect
+	github.com/prometheus/client_model v0.6.2 // indirect
+	github.com/prometheus/common v0.65.0 // indirect
+	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/robfig/cron v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
@@ -88,21 +88,21 @@ require (
 	go.opentelemetry.io/proto/otlp v1.4.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/crypto v0.37.0 // indirect
+	golang.org/x/crypto v0.38.0 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/mod v0.24.0 // indirect
-	golang.org/x/net v0.39.0 // indirect
-	golang.org/x/oauth2 v0.27.0 // indirect
-	golang.org/x/sync v0.13.0 // indirect
-	golang.org/x/sys v0.32.0 // indirect
-	golang.org/x/term v0.31.0 // indirect
-	golang.org/x/text v0.24.0 // indirect
+	golang.org/x/net v0.40.0 // indirect
+	golang.org/x/oauth2 v0.30.0 // indirect
+	golang.org/x/sync v0.14.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/term v0.32.0 // indirect
+	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
 	golang.org/x/tools v0.32.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20241209162323-e6fa225c2576 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576 // indirect
 	google.golang.org/grpc v1.68.1 // indirect
-	google.golang.org/protobuf v1.36.5 // indirect
+	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
