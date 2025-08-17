@@ -1,6 +1,8 @@
 module github.com/openshift/secondary-scheduler-operator
 
-go 1.20
+go 1.23.0
+
+toolchain go1.24.4
 
 require (
 	github.com/openshift/api v0.0.0-20231019105552-3a98ec045aeb
@@ -9,7 +11,7 @@ require (
 	github.com/openshift/library-go v0.0.0-20231017173800-126f85ed0cc7
 	github.com/prometheus/client_golang v1.16.0
 	github.com/spf13/cobra v1.7.0
-	google.golang.org/protobuf v1.33.0 // indirect; to improve error handling
+	google.golang.org/protobuf v1.36.7 // indirect; to improve error handling
 	k8s.io/api v0.28.15
 	k8s.io/apiextensions-apiserver v0.28.15
 	k8s.io/apimachinery v0.28.15
@@ -103,7 +105,7 @@ require (
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230526161137-0005af68ea54 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230525234035-dd9d682886f9 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230525234030-28d5490b6b19 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250811230008-5f3141c8851a // indirect
 	google.golang.org/grpc v1.56.3 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
