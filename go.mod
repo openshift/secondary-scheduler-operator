@@ -21,7 +21,7 @@ require (
 
 // To address CVE-2023-44487 until k8s 1.26.9 release is out
 replace (
-	k8s.io/api => k8s.io/kubernetes/staging/src/k8s.io/api v0.0.0-20231016135919-b7dce62deaba
+	k8s.io/api => k8s.io/kubernetes/staging/src/k8s.io/api 8082e9ab157b
 	k8s.io/apimachinery => k8s.io/kubernetes/staging/src/k8s.io/apimachinery v0.0.0-20231016135919-b7dce62deaba
 	k8s.io/apiserver => k8s.io/kubernetes/staging/src/k8s.io/apiserver v0.0.0-20231016135919-b7dce62deaba
 	k8s.io/client-go => k8s.io/kubernetes/staging/src/k8s.io/client-go v0.0.0-20231016135919-b7dce62deaba
