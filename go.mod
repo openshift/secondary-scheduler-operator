@@ -3,7 +3,7 @@ module github.com/openshift/secondary-scheduler-operator
 go 1.20
 
 require (
-	github.com/openshift/api v0.0.0-20231019105552-3a98ec045aeb
+	github.com/openshift/api 88b2b21555f3
 	github.com/openshift/build-machinery-go v0.0.0-20230816154005-5a38e1bfd880
 	github.com/openshift/client-go v0.0.0-20231018150822-6e226e2825a6
 	github.com/openshift/library-go v0.0.0-20231017173800-126f85ed0cc7
