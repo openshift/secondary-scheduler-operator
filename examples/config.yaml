@@ -1,0 +1,11 @@
+apiVersion: kubescheduler.config.k8s.io/v1beta1
+kind: KubeSchedulerConfiguration
+leaderElection:
+  leaderElect: false
+profiles:
+  - schedulerName: secondary-scheduler
+    plugins:
+      score:
+        disabled:
+          - name: NodeResourcesBalancedAllocation
+          - name: NodeResourcesLeastAllocated
