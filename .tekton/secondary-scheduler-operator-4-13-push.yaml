@@ -7,7 +7,19 @@ metadata:
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
     pipelinesascode.tekton.dev/cancel-in-progress: "false"
     pipelinesascode.tekton.dev/max-keep-runs: "3"
-    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch == "release-4.13"
+    pipelinesascode.tekton.dev/on-cel-expression: event == "push"
+      && target_branch == "release-4.13"
+      && (
+      ".tekton/secondary-scheduler-operator-4-13-push.yaml".pathChanged()
+      || "cmd/***".pathChanged()
+      || "deploy/***".pathChanged()
+      || "pkg/***".pathChanged()
+      || "vendor/***".pathChanged()
+      || "Dockerfile".pathChanged()
+      || "go.mod".pathChanged()
+      || "go.sum".pathChanged()
+      || "Makefile".pathChanged()
+      )
   creationTimestamp:
   labels:
     appstudio.openshift.io/application: secondary-scheduler-operator-4-13
