@@ -2,5 +2,11 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "gomod": {
     "enabled": false
-  }
+  },
+  "baseBranchConfig": [
+    {
+      "baseBranch": "main",
+      "labels": ["ok-to-test"]
+    }
+  ]
 }
