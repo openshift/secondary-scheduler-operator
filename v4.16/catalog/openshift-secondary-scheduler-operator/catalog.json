@@ -402,7 +402,7 @@
     "schema": "olm.bundle",
     "name": "secondaryscheduleroperator.v1.2.3",
     "package": "openshift-secondary-scheduler-operator",
-    "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:41cfb2120ec1613ce78ab5eba98d9447e4ea37681db3c4939842c0ecf6cdb0f7",
+    "image": "registry.stage.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:41cfb2120ec1613ce78ab5eba98d9447e4ea37681db3c4939842c0ecf6cdb0f7",
     "properties": [
         {
             "type": "olm.gvk",
@@ -512,7 +512,7 @@
         },
         {
             "name": "",
-            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:41cfb2120ec1613ce78ab5eba98d9447e4ea37681db3c4939842c0ecf6cdb0f7"
+            "image": "registry.stage.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:41cfb2120ec1613ce78ab5eba98d9447e4ea37681db3c4939842c0ecf6cdb0f7"
         }
     ]
 }
@@ -764,7 +764,7 @@
     "schema": "olm.bundle",
     "name": "secondaryscheduleroperator.v1.3.2",
     "package": "openshift-secondary-scheduler-operator",
-    "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:386879b4a7358b3648cde6c921a50d844943e6d86e3eb80a6fc99164d5798e0a",
+    "image": "registry.stage.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:386879b4a7358b3648cde6c921a50d844943e6d86e3eb80a6fc99164d5798e0a",
     "properties": [
         {
             "type": "olm.gvk",
@@ -880,7 +880,7 @@
         },
         {
             "name": "",
-            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:386879b4a7358b3648cde6c921a50d844943e6d86e3eb80a6fc99164d5798e0a"
+            "image": "registry.stage.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:386879b4a7358b3648cde6c921a50d844943e6d86e3eb80a6fc99164d5798e0a"
         }
     ]
 }
