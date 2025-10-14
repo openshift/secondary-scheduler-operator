@@ -8,14 +8,14 @@ metadata:
     pipelinesascode.tekton.dev/cancel-in-progress: "false"
     pipelinesascode.tekton.dev/max-keep-runs: "3"
     pipelinesascode.tekton.dev/on-cel-expression: event == "push"
-      && target_branch == "fbc-4.20"
-      && ( "v4.20/***".pathChanged() || ".tekton/secondary-scheduler-operator-fbc-4-20-push.yaml".pathChanged() )
+      && target_branch == "fbc-4.12"
+      && ( "v4.12/***".pathChanged() || ".tekton/secondary-scheduler-operator-fbc-4-12-push.yaml".pathChanged() )
   creationTimestamp: null
   labels:
-    appstudio.openshift.io/application: secondary-scheduler-operator-fbc-4-20
-    appstudio.openshift.io/component: secondary-scheduler-operator-fbc-4-20
+    appstudio.openshift.io/application: secondary-scheduler-operator-fbc-4-12
+    appstudio.openshift.io/component: secondary-scheduler-operator-fbc-4-12
     pipelines.appstudio.openshift.io/type: build
-  name: secondary-scheduler-operator-fbc-4-20-on-push
+  name: secondary-scheduler-operator-fbc-4-12-on-push
   namespace: crt-nshift-secondary-tenant
 spec:
   params:
@@ -24,7 +24,7 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-fbc-4-20:{{revision}}
+    value: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-fbc-4-12:{{revision}}
   - name: build-platforms
     value:
     - linux/x86_64
@@ -34,7 +34,7 @@ spec:
   - name: dockerfile
     value: catalog.Dockerfile
   - name: path-context
-    value: v4.20
+    value: v4.12
   pipelineSpec:
     description: |
       This pipeline is ideal for building and verifying [file-based catalogs](https://konflux-ci.dev/docs/end-to-end/building-olm/#building-the-file-based-catalog).
@@ -413,7 +413,7 @@ spec:
     - name: netrc
       optional: true
   taskRunTemplate:
-    serviceAccountName: build-pipeline-secondary-scheduler-operator-fbc-4-20
+    serviceAccountName: build-pipeline-secondary-scheduler-operator-fbc-4-12
   workspaces:
   - name: git-auth
     secret:

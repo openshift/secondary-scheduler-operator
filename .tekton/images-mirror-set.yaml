@@ -2,18 +2,18 @@
 apiVersion: operator.openshift.io/v1alpha1
 kind: ImageDigestMirrorSet
 metadata:
-  name: mirror-set-secondary-scheduler-operator-4-20
+  name: mirror-set-secondary-scheduler-operator-4-12
 spec:
   imageDigestMirrors:
     - mirrors:
-        - quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-bundle-4-20
+        - quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-bundle-4-12
       source: registry.stage.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle
     - mirrors:
-        - quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-bundle-4-20
+        - quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-bundle-4-12
       source: registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle
     - mirrors:
-        - quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-4-20
+        - quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-4-12
       source: registry.stage.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator
     - mirrors:
-        - quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-4-20
+        - quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-4-12
       source: registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator
