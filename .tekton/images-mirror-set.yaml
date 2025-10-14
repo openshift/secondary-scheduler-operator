@@ -2,7 +2,7 @@
 apiVersion: operator.openshift.io/v1alpha1
 kind: ImageDigestMirrorSet
 metadata:
-  name: mirror-set-secondary-scheduler-operator-4-15
+  name: mirror-set-secondary-scheduler-operator-4-14
 spec:
   imageDigestMirrors:
     - mirrors:
