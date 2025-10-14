@@ -13,6 +13,38 @@
         {
             "entries": [
                 {
+                    "name": "secondaryscheduleroperator.v1.1.0",
+                    "skipRange": "\u003e=1.0.0 \u003c1.1.0"
+                },
+                {
+                    "name": "secondaryscheduleroperator.v1.1.1",
+                    "skipRange": "\u003e=1.0.0 \u003c1.1.1"
+                },
+                {
+                    "name": "secondaryscheduleroperator.v1.1.2",
+                    "skipRange": "\u003e=1.0.0 \u003c1.1.2"
+                },
+                {
+                    "name": "secondaryscheduleroperator.v1.1.3",
+                    "skipRange": "\u003e=1.0.0 \u003c1.1.3"
+                },
+                {
+                    "name": "secondaryscheduleroperator.v1.1.4",
+                    "skipRange": "\u003e=1.0.0 \u003c1.1.4"
+                },
+                {
+                    "name": "secondaryscheduleroperator.v1.2.0",
+                    "skipRange": "\u003e=1.1.0 \u003c1.2.0"
+                },
+                {
+                    "name": "secondaryscheduleroperator.v1.2.1",
+                    "skipRange": "\u003e=1.1.0 \u003c1.2.1"
+                },
+                {
+                    "name": "secondaryscheduleroperator.v1.2.2",
+                    "skipRange": "\u003e=1.1.0 \u003c1.2.2"
+                },
+                {
                     "name": "secondaryscheduleroperator.v1.3.0",
                     "skipRange": "\u003e=1.2.1 \u003c1.3.0"
                 },
@@ -62,11 +94,43 @@
         },
         {
             "schema": "olm.bundle",
+            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:af3c5d26694a45eacef9dd65363c73466bb1c504ce6d7390c6c8301c1a6b5593"
+        },
+        {
+            "schema": "olm.bundle",
+            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:a63cc3c6ded0fc37025279cd263e4b26c6c4dc076749fecdf312202052c365d1"
+        },
+        {
+            "schema": "olm.bundle",
+            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:57ea9c8a202291eea1c04beededfbac6d4efaf5e675852ad26a92dddc064f19e"
+        },
+        {
+            "schema": "olm.bundle",
+            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:34c28cfae78fbaafd1c1cc39bd531a9e96d789999def2efa320972ee1a1bcadf"
+        },
+        {
+            "schema": "olm.bundle",
+            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:d4904cd6fadabe7f3dbd921711bfd6fa1a3242724fce831b03a205616b034900"
+        },
+        {
+            "schema": "olm.bundle",
+            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:55afe5d03f225879d34270c96e1d6d98becbf9af5682b85c0ceb5f8ba1534d9a"
+        },
+        {
+            "schema": "olm.bundle",
+            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:103f6dc174c6ca58f620ad874a09b597237b93a3b96ebac0fb6d3db6111c8840"
+        },
+        {
+            "schema": "olm.bundle",
+            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:c34fab2eda402339ae6eb19943585d81a7b4cdabfd3dd87b83143573fd24282d"
+        },
+        {
+            "schema": "olm.bundle",
             "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:4cea92798fa738944ec3487604e0974e8403e9b31b6330981cb28f12acafed05"
         },
         {
             "schema": "olm.bundle",
-            "image": "registry.stage.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:082fec20563feb75173232be85f9cca2d564f7bf141a99973e3bd993ec6f6f33"
+            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:082fec20563feb75173232be85f9cca2d564f7bf141a99973e3bd993ec6f6f33"
         },
         {
             "schema": "olm.bundle",
@@ -78,7 +142,7 @@
         },
         {
             "schema": "olm.bundle",
-            "image": "registry.stage.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:3804fcb77893d9198527b4801e2a778bf612596c9a0b125a0f0f872b23138434"
+            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:3804fcb77893d9198527b4801e2a778bf612596c9a0b125a0f0f872b23138434"
         },
         {
             "schema": "olm.bundle",
