@@ -53,11 +53,19 @@
             "skipRange": ">=1.2.0 <1.3.1"
         },
         {
+            "name": "secondaryscheduleroperator.v1.3.2",
+            "skipRange": ">=1.2.0 <1.3.2"
+        },
+        {
             "name": "secondaryscheduleroperator.v1.4.0",
             "skipRange": ">=1.3.0 <1.4.0"
         },
         {
             "name": "secondaryscheduleroperator.v1.4.1",
+            "skipRange": ">=1.3.0 <1.4.1"
+        },
+        {
+            "name": "secondaryscheduleroperator.v1.4.2",
             "replaces": "secondaryscheduleroperator.v1.3.0",
             "skips": [
                 "secondaryscheduleroperator.v1.1.0",
@@ -65,8 +73,6 @@
                 "secondaryscheduleroperator.v1.1.2",
                 "secondaryscheduleroperator.v1.1.3",
                 "secondaryscheduleroperator.v1.1.4",
-                "secondaryscheduleroperator.v1.1.5",
-                "secondaryscheduleroperator.v1.1.6",
                 "secondaryscheduleroperator.v1.2.0",
                 "secondaryscheduleroperator.v1.2.1",
                 "secondaryscheduleroperator.v1.2.2",
@@ -81,9 +87,10 @@
                 "secondaryscheduleroperator.v1.3.4",
                 "secondaryscheduleroperator.v1.3.5",
                 "secondaryscheduleroperator.v1.3.6",
-                "secondaryscheduleroperator.v1.4.0"
+                "secondaryscheduleroperator.v1.4.0",
+                "secondaryscheduleroperator.v1.4.1"
             ],
-            "skipRange": ">=1.3.0 <1.4.1"
+            "skipRange": ">=1.3.0 <1.4.2"
         }
     ]
 }
@@ -1225,6 +1232,130 @@
 }
 {
     "schema": "olm.bundle",
+    "name": "secondaryscheduleroperator.v1.3.2",
+    "package": "openshift-secondary-scheduler-operator",
+    "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:f74547b7a26d7da6c5a81dbf9955b8bc934e46626c3c80cd479d63b4853abc43",
+    "properties": [
+        {
+            "type": "olm.gvk",
+            "value": {
+                "group": "operator.openshift.io",
+                "kind": "SecondaryScheduler",
+                "version": "v1"
+            }
+        },
+        {
+            "type": "olm.package",
+            "value": {
+                "packageName": "openshift-secondary-scheduler-operator",
+                "version": "1.3.2"
+            }
+        },
+        {
+            "type": "olm.csv.metadata",
+            "value": {
+                "annotations": {
+                    "alm-examples": "[\n  {\n    \"apiVersion\": \"operator.openshift.io/v1\",\n    \"kind\": \"SecondaryScheduler\",\n    \"metadata\": {\n      \"name\": \"cluster\",\n      \"namespace\": \"openshift-secondary-scheduler-operator\"\n    },\n    \"spec\": {\n      \"managementState\": \"Managed\",\n      \"schedulerConfig\": \"secondary-scheduler-config\"\n    }\n  }\n]\n",
+                    "capabilities": "Basic Install",
+                    "categories": "OpenShift Optional",
+                    "certified": "false",
+                    "console.openshift.io/operator-monitoring-default": "true",
+                    "containerImage": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator@sha256:02d8100a24de595fe9b378f370d11d89026f5aa02fe7f1edc6b9ee19d88b88c2",
+                    "createdAt": "2025/10/14",
+                    "description": "Runs a secondary scheduler in an OpenShift cluster.",
+                    "features.operators.openshift.io/cnf": "false",
+                    "features.operators.openshift.io/cni": "false",
+                    "features.operators.openshift.io/csi": "false",
+                    "features.operators.openshift.io/disconnected": "true",
+                    "features.operators.openshift.io/fips-compliant": "true",
+                    "features.operators.openshift.io/proxy-aware": "false",
+                    "features.operators.openshift.io/tls-profiles": "false",
+                    "features.operators.openshift.io/token-auth-aws": "false",
+                    "features.operators.openshift.io/token-auth-azure": "false",
+                    "features.operators.openshift.io/token-auth-gcp": "false",
+                    "olm.skipRange": ">=1.2.0 <1.3.2",
+                    "operatorframework.io/cluster-monitoring": "true",
+                    "operatorframework.io/suggested-namespace": "openshift-secondary-scheduler-operator",
+                    "operators.openshift.io/valid-subscription": "[\"OpenShift Container Platform\", \"OpenShift Platform Plus\"]",
+                    "repository": "https://github.com/openshift/secondary-scheduler-operator",
+                    "support": "Red Hat, Inc."
+                },
+                "apiServiceDefinitions": {},
+                "crdDescriptions": {
+                    "owned": [
+                        {
+                            "name": "secondaryschedulers.operator.openshift.io",
+                            "version": "v1",
+                            "kind": "SecondaryScheduler",
+                            "displayName": "Secondary Scheduler",
+                            "description": "SecondaryScheduler is the schema for the secondaryschedulers API"
+                        }
+                    ]
+                },
+                "description": "The Secondary Scheduler Operator provides the ability to use a customized scheduler image that was developed using the scheduler plugin framework as a secondary scheduler in OpenShift.\n\n## Secondary Scheduler Configuration\n\nOnce the Secondary Scheduler Operator is installed, you can configure the plugins to run for your secondary scheduler.\n\nThe configuration of the secondary scheduler is defined through a config map that wraps the KubeSchedulerConfiguration YAML file in \"config.yaml\".\n\n## Additional Parameters\n\nAdditionally, the following parameters can be configured:\n\n* `schedulerConfig` - Set the config map configuration for the secondary scheduler.\n* `schedulerImage` - Set the default operand image for the secondary scheduler.\n",
+                "displayName": "Secondary Scheduler Operator for Red Hat OpenShift",
+                "installModes": [
+                    {
+                        "type": "OwnNamespace",
+                        "supported": true
+                    },
+                    {
+                        "type": "SingleNamespace",
+                        "supported": true
+                    },
+                    {
+                        "type": "MultiNamespace",
+                        "supported": false
+                    },
+                    {
+                        "type": "AllNamespaces",
+                        "supported": false
+                    }
+                ],
+                "keywords": [
+                    "secondary",
+                    "scheduling",
+                    "workload"
+                ],
+                "labels": {
+                    "operatorframework.io/arch.amd64": "supported",
+                    "operatorframework.io/arch.arm64": "supported",
+                    "operatorframework.io/arch.ppc64le": "supported",
+                    "operatorframework.io/arch.s390x": "supported"
+                },
+                "links": [
+                    {
+                        "name": "Source Code",
+                        "url": "https://github.com/openshift/secondary-scheduler-operator"
+                    }
+                ],
+                "maintainers": [
+                    {
+                        "name": "Red Hat",
+                        "email": "support@redhat.com"
+                    }
+                ],
+                "maturity": "beta",
+                "minKubeVersion": "1.29.0",
+                "provider": {
+                    "name": "Red Hat, Inc."
+                }
+            }
+        }
+    ],
+    "relatedImages": [
+        {
+            "name": "secondary-scheduler-operator",
+            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator@sha256:02d8100a24de595fe9b378f370d11d89026f5aa02fe7f1edc6b9ee19d88b88c2"
+        },
+        {
+            "name": "",
+            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:f74547b7a26d7da6c5a81dbf9955b8bc934e46626c3c80cd479d63b4853abc43"
+        }
+    ]
+}
+{
+    "schema": "olm.bundle",
     "name": "secondaryscheduleroperator.v1.4.0",
     "package": "openshift-secondary-scheduler-operator",
     "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:c1dca4cb4d901a4ae7798e592fad162ada2c7ab99e8062d712e5415fc2fd5d00",
@@ -1462,6 +1593,127 @@
         {
             "name": "secondary-scheduler-operator",
             "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator@sha256:3a3921cb05cf8bfdca6f7a3ccbe59f9dfda8c697b53d9be0464cf3b7a961162f"
+        }
+    ]
+}
+{
+    "schema": "olm.bundle",
+    "name": "secondaryscheduleroperator.v1.4.2",
+    "package": "openshift-secondary-scheduler-operator",
+    "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:f72d7562cdaddec5d52a83c0eafd24a7e13f10edc8c3cd91c9f63ea5e53627c7",
+    "properties": [
+        {
+            "type": "olm.gvk",
+            "value": {
+                "group": "operator.openshift.io",
+                "kind": "SecondaryScheduler",
+                "version": "v1"
+            }
+        },
+        {
+            "type": "olm.package",
+            "value": {
+                "packageName": "openshift-secondary-scheduler-operator",
+                "version": "1.4.2"
+            }
+        },
+        {
+            "type": "olm.csv.metadata",
+            "value": {
+                "annotations": {
+                    "alm-examples": "[\n  {\n    \"apiVersion\": \"operator.openshift.io/v1\",\n    \"kind\": \"SecondaryScheduler\",\n    \"metadata\": {\n      \"name\": \"cluster\",\n      \"namespace\": \"openshift-secondary-scheduler-operator\"\n    },\n    \"spec\": {\n      \"managementState\": \"Managed\",\n      \"schedulerConfig\": \"secondary-scheduler-config\"\n    }\n  }\n]\n",
+                    "capabilities": "Basic Install",
+                    "categories": "OpenShift Optional",
+                    "certified": "false",
+                    "containerImage": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator@sha256:4baa2c87300b779f1fa8937ce4472eba140e1dc7d6f36b9e8caad2f828d81198",
+                    "createdAt": "2025/10/14",
+                    "description": "Runs a secondary scheduler in an OpenShift cluster.",
+                    "features.operators.openshift.io/cnf": "false",
+                    "features.operators.openshift.io/cni": "false",
+                    "features.operators.openshift.io/csi": "false",
+                    "features.operators.openshift.io/disconnected": "true",
+                    "features.operators.openshift.io/fips-compliant": "true",
+                    "features.operators.openshift.io/proxy-aware": "false",
+                    "features.operators.openshift.io/tls-profiles": "false",
+                    "features.operators.openshift.io/token-auth-aws": "false",
+                    "features.operators.openshift.io/token-auth-azure": "false",
+                    "features.operators.openshift.io/token-auth-gcp": "false",
+                    "olm.skipRange": ">=1.3.0 <1.4.2",
+                    "operators.openshift.io/valid-subscription": "[\"OpenShift Container Platform\", \"OpenShift Platform Plus\"]",
+                    "repository": "https://github.com/openshift/secondary-scheduler-operator",
+                    "support": "Red Hat, Inc."
+                },
+                "apiServiceDefinitions": {},
+                "crdDescriptions": {
+                    "owned": [
+                        {
+                            "name": "secondaryschedulers.operator.openshift.io",
+                            "version": "v1",
+                            "kind": "SecondaryScheduler",
+                            "displayName": "Secondary Scheduler",
+                            "description": "SecondaryScheduler is the schema for the secondaryschedulers API"
+                        }
+                    ]
+                },
+                "description": "The Secondary Scheduler Operator provides the ability to use a customized scheduler image that was developed using the scheduler plugin framework as a secondary scheduler in OpenShift.\n\n## Secondary Scheduler Configuration\n\nOnce the Secondary Scheduler Operator is installed, you can configure the plugins to run for your secondary scheduler.\n\nThe configuration of the secondary scheduler is defined through a config map that wraps the KubeSchedulerConfiguration YAML file in \"config.yaml\".\n\n## Additional Parameters\n\nAdditionally, the following parameters can be configured:\n\n* `schedulerConfig` - Set the config map configuration for the secondary scheduler.\n* `schedulerImage` - Set the default operand image for the secondary scheduler.\n",
+                "displayName": "Secondary Scheduler Operator for Red Hat OpenShift",
+                "installModes": [
+                    {
+                        "type": "OwnNamespace",
+                        "supported": true
+                    },
+                    {
+                        "type": "SingleNamespace",
+                        "supported": true
+                    },
+                    {
+                        "type": "MultiNamespace",
+                        "supported": false
+                    },
+                    {
+                        "type": "AllNamespaces",
+                        "supported": false
+                    }
+                ],
+                "keywords": [
+                    "secondary",
+                    "scheduling",
+                    "workload"
+                ],
+                "labels": {
+                    "operatorframework.io/arch.amd64": "supported",
+                    "operatorframework.io/arch.arm64": "supported",
+                    "operatorframework.io/arch.ppc64le": "supported",
+                    "operatorframework.io/arch.s390x": "supported"
+                },
+                "links": [
+                    {
+                        "name": "Source Code",
+                        "url": "https://github.com/openshift/secondary-scheduler-operator"
+                    }
+                ],
+                "maintainers": [
+                    {
+                        "name": "Red Hat",
+                        "email": "support@redhat.com"
+                    }
+                ],
+                "maturity": "beta",
+                "minKubeVersion": "1.31.0",
+                "provider": {
+                    "name": "Red Hat, Inc."
+                }
+            }
+        }
+    ],
+    "relatedImages": [
+        {
+            "name": "secondary-scheduler-operator",
+            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator@sha256:4baa2c87300b779f1fa8937ce4472eba140e1dc7d6f36b9e8caad2f828d81198"
+        },
+        {
+            "name": "",
+            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:f72d7562cdaddec5d52a83c0eafd24a7e13f10edc8c3cd91c9f63ea5e53627c7"
         }
     ]
 }
