@@ -4,7 +4,7 @@ COPY . .
 
 RUN make build
 
-FROM registry.ci.openshift.org/ocp/4.20:base-rhel9
+FROM registry.ci.openshift.org/ocp/4.24:base-rhel9
 COPY --from=builder /go/src/github.com/openshift/secondary-scheduler-operator/secondary-scheduler-operator /usr/bin/
 # Upstream bundle and index images does not support versioning so
 # we need to copy a specific version under /manifests layout directly
