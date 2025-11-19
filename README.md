@@ -17,6 +17,8 @@ $ cd v4.14
 $ opm alpha render-template basic catalog-template.json > catalog/openshift-secondary-scheduler-operator/catalog.json
 ```
 
+# Releases
+
 | osso version | bundle image                                                     |
 | ------------ | ---------------------------------------------------------------- |
 | 1.1.2        | daea4461ca6a1903f2e2a1470df8fdfe413106e84e0b36789e0fb0e2bbdba333 |
