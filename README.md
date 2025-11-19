@@ -11,8 +11,6 @@ $ opm alpha render-template basic catalog-template.json --migrate-level bundle-o
 
 | osso version | bundle image                                                     |
 | ------------ | ---------------------------------------------------------------- |
-| 1.1.2        | daea4461ca6a1903f2e2a1470df8fdfe413106e84e0b36789e0fb0e2bbdba333 |
-| 1.1.4        | c3180b19acf3b2fefc93a1620917b5f94731ecfe87457c811359e0aa0d25f4ae |
 | 1.2.0        | 775e1822637d308859c4eff42d7b09c949610430ff27cf08d01d41e44cbac2ff |
 | 1.2.1        | 959d5567fa57212bb1d707c6cd0b67d47af4431d7b567f81bcb7e19892fdde30 |
 | 1.2.2        | fe9c58508028d2b9561e09104e11c04b412b060e2c5bae5cb237e20e91dacff8 |
