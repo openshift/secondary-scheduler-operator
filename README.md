@@ -192,3 +192,36 @@ spec:
 ```
 
 The operator spec provides a `schedulerConfig` and a `schedulerImage` field, which allows users to specify a custom KubeSchedulerConfiguration and a custom scheduler image.
+
+## Tests
+
+This repository is compatible with the [OpenShift Tests Extension (OTE)](https://github.com/openshift-eng/openshift-tests-extension) framework.
+
+### Building the test binary
+
+```bash
+make build
+```
+
+### Running test suites and tests
+
+```bash
+# Run a specific test suite or test
+./secondary-scheduler-operator-tests-ext run-suite openshift/secondary-scheduler-operator/all
+./secondary-scheduler-operator-tests-ext run-test "test-name"
+
+# Run with JUnit output
+./secondary-scheduler-operator-tests-ext run-suite openshift/secondary-scheduler-operator/all --junit-path /tmp/junit.xml
+```
+
+### Listing available tests and suites
+
+```bash
+# List all test suites
+./secondary-scheduler-operator-tests-ext list suites
+
+# List tests in a suite
+./secondary-scheduler-operator-tests-ext list tests --suite=openshift/secondary-scheduler-operator/all
+```
+
+For more information about the OTE framework, see the [openshift-tests-extension documentation](https://github.com/openshift-eng/openshift-tests-extension).
