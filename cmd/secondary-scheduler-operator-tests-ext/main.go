@@ -2,7 +2,7 @@
 This command is used to run the Secondary Scheduler Operator tests extension for OpenShift.
 It registers the Secondary Scheduler  Operator tests with the OpenShift Tests Extension framework
 and provides a command-line interface to execute them.
-For further information, please refer to the documentation at:
+For further information, please refer to the documentation here
 https://github.com/openshift-eng/openshift-tests-extension/blob/main/cmd/example-tests/main.go
 */
 package main
