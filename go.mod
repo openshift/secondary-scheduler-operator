@@ -3,6 +3,8 @@ module github.com/openshift/secondary-scheduler-operator
 go 1.24.0
 
 require (
+	github.com/openshift-eng/openshift-tests-extension v0.0.0-20251113163031-356b66aa5c24
+	k8s.io/component-base v0.34.1
 	github.com/openshift/api v0.0.0-20251016080153-44baf885fd37
 	github.com/openshift/build-machinery-go v0.0.0-20250806130835-622c0378eb0d
 	github.com/openshift/client-go v0.0.0-20251015124057-db0dee36e235
@@ -20,10 +22,8 @@ require (
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 	sigs.k8s.io/controller-tools v0.18.0
-	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v6 v6.3.0
 )
-
-require sigs.k8s.io/structured-merge-diff/v4 v4.6.0
 
 require (
 	cel.dev/expr v0.24.0 // indirect
@@ -115,7 +115,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiserver v0.34.1 // indirect
-	k8s.io/component-base v0.34.1 // indirect
 	k8s.io/gengo/v2 v2.0.0-20250604051438-85fd79dbfd9f // indirect
 	k8s.io/kms v0.34.1 // indirect
 	k8s.io/kube-aggregator v0.34.1 // indirect
