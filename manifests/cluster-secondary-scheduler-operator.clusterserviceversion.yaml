@@ -2,7 +2,7 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
   # The version value is substituted by the ART pipeline
-  name: secondaryscheduleroperator.v1.5.0
+  name: secondaryscheduleroperator.v1.5.1
   namespace: openshift-secondary-scheduler-operator
   labels:
     operatorframework.io/arch.amd64: supported
@@ -27,7 +27,7 @@ metadata:
       ]
     certified: "false"
     containerImage: registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-rhel9-operator:latest
-    createdAt: 2025/08/24
+    createdAt: 2026/03/03
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "true"
     features.operators.openshift.io/proxy-aware: "false"
@@ -38,7 +38,7 @@ metadata:
     features.operators.openshift.io/cnf: "false"
     features.operators.openshift.io/cni: "false"
     features.operators.openshift.io/csi: "false"
-    olm.skipRange: ">=1.4.0 <1.5.0"
+    olm.skipRange: ">=1.4.0 <1.5.1"
     description: Runs a secondary scheduler in an OpenShift cluster.
     repository: https://github.com/openshift/secondary-scheduler-operator
     support: Red Hat, Inc.
@@ -54,12 +54,6 @@ spec:
   # The buffer len 6 should be sufficient for normal cadance. Including CVE releases.
   # The buffer can be extened later as needed.
   skips:
-  - secondaryscheduleroperator.v1.2.1
-  - secondaryscheduleroperator.v1.2.2
-  - secondaryscheduleroperator.v1.2.3
-  - secondaryscheduleroperator.v1.2.4
-  - secondaryscheduleroperator.v1.2.5
-  - secondaryscheduleroperator.v1.2.6
   - secondaryscheduleroperator.v1.3.0
   - secondaryscheduleroperator.v1.3.1
   - secondaryscheduleroperator.v1.3.2
@@ -74,6 +68,7 @@ spec:
   - secondaryscheduleroperator.v1.4.4
   - secondaryscheduleroperator.v1.4.5
   - secondaryscheduleroperator.v1.4.6
+  - secondaryscheduleroperator.v1.5.0
   customresourcedefinitions:
     owned:
     - displayName: Secondary Scheduler
@@ -102,7 +97,7 @@ spec:
   provider:
     name: Red Hat, Inc.
   maturity: beta
-  version: 1.5.0
+  version: 1.5.1
   relatedImages:
   - name: secondary-scheduler-operator
     image: registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-rhel9-operator:latest
@@ -118,7 +113,7 @@ spec:
   minKubeVersion: 1.33.0
   labels:
     olm-owner-enterprise-app: secondary-scheduler-operator
-    olm-status-descriptors: secondary-scheduler-operator.v1.5.0
+    olm-status-descriptors: secondary-scheduler-operator.v1.5.1
   installModes:
   - supported: true
     type: OwnNamespace
