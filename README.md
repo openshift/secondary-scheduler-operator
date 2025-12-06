@@ -3,9 +3,10 @@
 ## FBC catalog rendering
 
 ```
-$ cd v4.19
 $ export REGISTRY_AUTH_FILE=...
-$ opm alpha render-template basic catalog-template.json --migrate-level bundle-object-to-csv-metadata > catalog/openshift-secondary-scheduler-operator/catalog.json
+$ export DOCKER_CONFIG=...
+$ opm alpha render-template basic v4.20/catalog-template.json --migrate-level bundle-object-to-csv-metadata > v4.20/catalog/openshift-secondary-scheduler-operator/catalog.json
+$ opm validate v4.20/catalog/openshift-secondary-scheduler-operator
 ```
 
 ## Releases
