@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(opm alpha render-template:*)",
+      "Bash(opm validate:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
