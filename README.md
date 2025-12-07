@@ -5,7 +5,7 @@
 ```
 $ export REGISTRY_AUTH_FILE=...
 $ export DOCKER_CONFIG=...
-$ opm alpha render-template basic v4.20/catalog-template.json --migrate-level bundle-object-to-csv-metadata > v4.20/catalog/openshift-secondary-scheduler-operator/catalog.json
+$ opm alpha render-template basic v4.20/catalog-template.yaml --migrate-level bundle-object-to-csv-metadata > v4.20/catalog/openshift-secondary-scheduler-operator/catalog.json
 $ opm validate v4.20/catalog/openshift-secondary-scheduler-operator
 ```
 
