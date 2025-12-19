@@ -4,16 +4,17 @@ metadata:
   annotations:
     build.appstudio.openshift.io/repo: https://github.com/openshift/secondary-scheduler-operator?rev={{revision}}
     build.appstudio.redhat.com/commit_sha: '{{revision}}'
+    build.appstudio.redhat.com/pull_request_number: '{{pull_request_number}}'
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
-    pipelinesascode.tekton.dev/cancel-in-progress: 'false'
+    pipelinesascode.tekton.dev/cancel-in-progress: 'true'
     pipelinesascode.tekton.dev/max-keep-runs: '3'
-    pipelinesascode.tekton.dev/on-cel-expression: event == "push" && target_branch == "main" && ( ".tekton/secondary-scheduler-operator-bundle-main-push.yaml".pathChanged() || "metadata/***".pathChanged() || "manifests/***".pathChanged() || "bundle.Dockerfile".pathChanged() )
+    pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && target_branch == "release-4.21" && ( ".tekton/secondary-scheduler-operator-bundle-4-21-pull-request.yaml".pathChanged() || "metadata/***".pathChanged() || "manifests/***".pathChanged() || "bundle.Dockerfile".pathChanged() )
   creationTimestamp:
   labels:
-    appstudio.openshift.io/application: secondary-scheduler-operator-main
-    appstudio.openshift.io/component: secondary-scheduler-operator-bundle-main
+    appstudio.openshift.io/application: secondary-scheduler-operator-4-21
+    appstudio.openshift.io/component: secondary-scheduler-operator-bundle-4-21
     pipelines.appstudio.openshift.io/type: build
-  name: secondary-scheduler-operator-bundle-main-on-push
+  name: secondary-scheduler-operator-bundle-4-21-on-pull-request
   namespace: crt-nshift-secondary-tenant
 spec:
   params:
@@ -22,7 +23,9 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-bundle-main:{{revision}}
+    value: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-bundle-4-21:on-pr-{{revision}}
+  - name: image-expires-after
+    value: 5d
   - name: dockerfile
     value: bundle.Dockerfile
   pipelineSpec:
@@ -107,6 +110,10 @@ spec:
       default: docker
       type: string
       description: The format for the resulting image's mediaType. Valid values are oci or docker.
+    - name: enable-cache-proxy
+      default: 'false'
+      description: Enable cache proxy configuration
+      type: string
     results:
     - description: ''
       name: IMAGE_URL
@@ -129,6 +136,8 @@ spec:
         value: $(params.rebuild)
       - name: skip-checks
         value: $(params.skip-checks)
+      - name: enable-cache-proxy
+        value: $(params.enable-cache-proxy)
       taskRef:
         params:
         - name: name
@@ -222,6 +231,10 @@ spec:
         value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
       - name: BUILDAH_FORMAT
         value: $(params.buildah-format)
+      - name: HTTP_PROXY
+        value: $(tasks.init.results.http-proxy)
+      - name: NO_PROXY
+        value: $(tasks.init.results.no-proxy)
       runAfter:
       - prefetch-dependencies
       taskRef:
@@ -597,7 +610,7 @@ spec:
     - name: netrc
       optional: true
   taskRunTemplate:
-    serviceAccountName: build-pipeline-secondary-scheduler-operator-bundle-main
+    serviceAccountName: build-pipeline-secondary-scheduler-operator-bundle-4-21
   workspaces:
   - name: git-auth
     secret:
