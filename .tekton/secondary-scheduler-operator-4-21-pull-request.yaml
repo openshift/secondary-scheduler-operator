@@ -8,13 +8,13 @@ metadata:
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
     pipelinesascode.tekton.dev/cancel-in-progress: 'true'
     pipelinesascode.tekton.dev/max-keep-runs: '3'
-    pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && target_branch == "main" && ( ".tekton/secondary-scheduler-operator-main-pull-request.yaml".pathChanged() || "cmd/***".pathChanged() || "deploy/***".pathChanged() || "pkg/***".pathChanged() || "vendor/***".pathChanged() || "Dockerfile".pathChanged() || "go.mod".pathChanged() || "go.sum".pathChanged() || "Makefile".pathChanged() )
+    pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request" && target_branch == "release-4.21" && ( ".tekton/secondary-scheduler-operator-4-21-pull-request.yaml".pathChanged() || "cmd/***".pathChanged() || "deploy/***".pathChanged() || "pkg/***".pathChanged() || "vendor/***".pathChanged() || "Dockerfile".pathChanged() || "go.mod".pathChanged() || "go.sum".pathChanged() || "Makefile".pathChanged() )
   creationTimestamp:
   labels:
-    appstudio.openshift.io/application: secondary-scheduler-operator-main
-    appstudio.openshift.io/component: secondary-scheduler-operator-main
+    appstudio.openshift.io/application: secondary-scheduler-operator-4-21
+    appstudio.openshift.io/component: secondary-scheduler-operator-4-21
     pipelines.appstudio.openshift.io/type: build
-  name: secondary-scheduler-operator-main-on-pull-request
+  name: secondary-scheduler-operator-4-21-on-pull-request
   namespace: crt-nshift-secondary-tenant
 spec:
   params:
@@ -23,7 +23,7 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-main:on-pr-{{revision}}
+    value: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-4-21:on-pr-{{revision}}
   - name: image-expires-after
     value: 5d
   - name: dockerfile
@@ -625,7 +625,7 @@ spec:
     - name: netrc
       optional: true
   taskRunTemplate:
-    serviceAccountName: build-pipeline-secondary-scheduler-operator-main
+    serviceAccountName: build-pipeline-secondary-scheduler-operator-4-21
   workspaces:
   - name: git-auth
     secret:
