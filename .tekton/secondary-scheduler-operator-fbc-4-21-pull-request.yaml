@@ -4,18 +4,19 @@ metadata:
   annotations:
     build.appstudio.openshift.io/repo: https://github.com/openshift/secondary-scheduler-operator?rev={{revision}}
     build.appstudio.redhat.com/commit_sha: '{{revision}}'
+    build.appstudio.redhat.com/pull_request_number: '{{pull_request_number}}'
     build.appstudio.redhat.com/target_branch: '{{target_branch}}'
-    pipelinesascode.tekton.dev/cancel-in-progress: "false"
+    pipelinesascode.tekton.dev/cancel-in-progress: "true"
     pipelinesascode.tekton.dev/max-keep-runs: "3"
-    pipelinesascode.tekton.dev/on-cel-expression: event == "push"
-      && target_branch == "fbc-4.20"
-      && ( "v4.20/***".pathChanged() || ".tekton/secondary-scheduler-operator-fbc-4-20-push.yaml".pathChanged() )
+    pipelinesascode.tekton.dev/on-cel-expression: event == "pull_request"
+      && target_branch == "fbc-4.21"
+      && ( "v4.21/***".pathChanged() || ".tekton/secondary-scheduler-operator-fbc-4-21-pull-request.yaml".pathChanged() )
   creationTimestamp: null
   labels:
-    appstudio.openshift.io/application: secondary-scheduler-operator-fbc-4-20
-    appstudio.openshift.io/component: secondary-scheduler-operator-fbc-4-20
+    appstudio.openshift.io/application: secondary-scheduler-operator-fbc-4-21
+    appstudio.openshift.io/component: secondary-scheduler-operator-fbc-4-21
     pipelines.appstudio.openshift.io/type: build
-  name: secondary-scheduler-operator-fbc-4-20-on-push
+  name: secondary-scheduler-operator-fbc-4-21-on-pull-request
   namespace: crt-nshift-secondary-tenant
 spec:
   params:
@@ -24,7 +25,9 @@ spec:
   - name: revision
     value: '{{revision}}'
   - name: output-image
-    value: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-fbc-4-20:{{revision}}
+    value: quay.io/redhat-user-workloads/crt-nshift-secondary-tenant/secondary-scheduler-operator-fbc-4-21:on-pr-{{revision}}
+  - name: image-expires-after
+    value: 5d
   - name: build-platforms
     value:
     - linux/x86_64
@@ -34,7 +37,7 @@ spec:
   - name: dockerfile
     value: catalog.Dockerfile
   - name: path-context
-    value: v4.20
+    value: v4.21
   pipelineSpec:
     description: |
       This pipeline is ideal for building and verifying [file-based catalogs](https://konflux-ci.dev/docs/end-to-end/building-olm/#building-the-file-based-catalog).
@@ -108,6 +111,10 @@ spec:
         set of values is determined by the configuration of the multi-platform-controller.
       name: build-platforms
       type: array
+    - name: enable-cache-proxy
+      default: 'false'
+      description: Enable cache proxy configuration
+      type: string
     results:
     - description: ""
       name: IMAGE_URL
@@ -130,6 +137,8 @@ spec:
         value: $(params.rebuild)
       - name: skip-checks
         value: $(params.skip-checks)
+      - name: enable-cache-proxy
+        value: $(params.enable-cache-proxy)
       taskRef:
         params:
         - name: name
@@ -251,6 +260,10 @@ spec:
         value: $(tasks.prefetch-dependencies.results.CACHI2_ARTIFACT)
       - name: IMAGE_APPEND_PLATFORM
         value: "true"
+      - name: HTTP_PROXY
+        value: $(tasks.init.results.http-proxy)
+      - name: NO_PROXY
+        value: $(tasks.init.results.no-proxy)
       runAfter:
       - clone-repository
       taskRef:
@@ -413,7 +426,7 @@ spec:
     - name: netrc
       optional: true
   taskRunTemplate:
-    serviceAccountName: build-pipeline-secondary-scheduler-operator-fbc-4-20
+    serviceAccountName: build-pipeline-secondary-scheduler-operator-fbc-4-21
   workspaces:
   - name: git-auth
     secret:

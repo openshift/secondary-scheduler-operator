@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(opm alpha render-template:*)",
-      "Bash(opm validate:*)"
+      "Bash(opm validate:*)",
+      "Skill(render-catalog)"
     ],
     "deny": [],
     "ask": []
