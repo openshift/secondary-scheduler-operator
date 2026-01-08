@@ -2,8 +2,10 @@ package operator
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
@@ -25,6 +27,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
@@ -281,6 +284,32 @@ func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondarys
 		required.Spec.Template.Spec.Containers[0].Args = append(required.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", 8))
 	default:
 		required.Spec.Template.Spec.Containers[0].Args = append(required.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("-v=%d", 2))
+	}
+
+	// Parse observedConfig to extract TLS configuration
+	var observedConfig map[string]interface{}
+	if len(secondaryScheduler.Spec.ObservedConfig.Raw) > 0 {
+		if err := json.Unmarshal(secondaryScheduler.Spec.ObservedConfig.Raw, &observedConfig); err != nil {
+			klog.Warningf("failed to unmarshal the observedConfig: %v", err)
+		}
+	}
+
+	cipherSuites, cipherSuitesFound, err := unstructured.NestedStringSlice(observedConfig, "servingInfo", "cipherSuites")
+	if err != nil {
+		klog.Warningf("couldn't get the servingInfo.cipherSuites config from observedConfig: %v", err)
+	}
+
+	minTLSVersion, minTLSVersionFound, err := unstructured.NestedString(observedConfig, "servingInfo", "minTLSVersion")
+	if err != nil {
+		klog.Warningf("couldn't get the servingInfo.minTLSVersion config from observedConfig: %v", err)
+	}
+
+	if cipherSuitesFound && len(cipherSuites) > 0 {
+		required.Spec.Template.Spec.Containers[0].Args = append(required.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--tls-cipher-suites=%s", strings.Join(cipherSuites, ",")))
+	}
+
+	if minTLSVersionFound && len(minTLSVersion) > 0 {
+		required.Spec.Template.Spec.Containers[0].Args = append(required.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--tls-min-version=%s", minTLSVersion))
 	}
 
 	resourcemerge.MergeMap(resourcemerge.BoolPtr(false), &required.Spec.Template.Annotations, specAnnotations)
