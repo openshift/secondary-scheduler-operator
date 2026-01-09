@@ -4,7 +4,6 @@ go 1.24.0
 
 require (
 	github.com/openshift-eng/openshift-tests-extension v0.0.0-20251113163031-356b66aa5c24
-	k8s.io/component-base v0.34.1
 	github.com/openshift/api v0.0.0-20251016080153-44baf885fd37
 	github.com/openshift/build-machinery-go v0.0.0-20250806130835-622c0378eb0d
 	github.com/openshift/client-go v0.0.0-20251015124057-db0dee36e235
@@ -19,6 +18,7 @@ require (
 	k8s.io/apimachinery v0.34.1
 	k8s.io/client-go v0.34.1
 	k8s.io/code-generator v0.34.1
+	k8s.io/component-base v0.34.1
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 	sigs.k8s.io/controller-tools v0.18.0
@@ -58,6 +58,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3 // indirect
+	github.com/imdario/mergo v0.3.7 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect

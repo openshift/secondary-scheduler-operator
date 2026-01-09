@@ -135,6 +135,9 @@ github.com/grpc-ecosystem/grpc-gateway/v2/internal/httprule
 github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options
 github.com/grpc-ecosystem/grpc-gateway/v2/runtime
 github.com/grpc-ecosystem/grpc-gateway/v2/utilities
+# github.com/imdario/mergo v0.3.7
+## explicit
+github.com/imdario/mergo
 # github.com/inconshreveable/mousetrap v1.1.0
 ## explicit; go 1.18
 github.com/inconshreveable/mousetrap
@@ -185,6 +188,7 @@ github.com/openshift-eng/openshift-tests-extension/pkg/version
 # github.com/openshift/api v0.0.0-20251016080153-44baf885fd37
 ## explicit; go 1.24.0
 github.com/openshift/api
+github.com/openshift/api/annotations
 github.com/openshift/api/apiserver
 github.com/openshift/api/apiserver/v1
 github.com/openshift/api/apps
@@ -265,10 +269,29 @@ github.com/openshift/build-machinery-go/make/targets/openshift/operator
 github.com/openshift/build-machinery-go/scripts
 # github.com/openshift/client-go v0.0.0-20251015124057-db0dee36e235
 ## explicit; go 1.24.0
+github.com/openshift/client-go/config/applyconfigurations
 github.com/openshift/client-go/config/applyconfigurations/config/v1
+github.com/openshift/client-go/config/applyconfigurations/config/v1alpha1
+github.com/openshift/client-go/config/applyconfigurations/config/v1alpha2
 github.com/openshift/client-go/config/applyconfigurations/internal
+github.com/openshift/client-go/config/clientset/versioned
+github.com/openshift/client-go/config/clientset/versioned/fake
 github.com/openshift/client-go/config/clientset/versioned/scheme
 github.com/openshift/client-go/config/clientset/versioned/typed/config/v1
+github.com/openshift/client-go/config/clientset/versioned/typed/config/v1/fake
+github.com/openshift/client-go/config/clientset/versioned/typed/config/v1alpha1
+github.com/openshift/client-go/config/clientset/versioned/typed/config/v1alpha1/fake
+github.com/openshift/client-go/config/clientset/versioned/typed/config/v1alpha2
+github.com/openshift/client-go/config/clientset/versioned/typed/config/v1alpha2/fake
+github.com/openshift/client-go/config/informers/externalversions
+github.com/openshift/client-go/config/informers/externalversions/config
+github.com/openshift/client-go/config/informers/externalversions/config/v1
+github.com/openshift/client-go/config/informers/externalversions/config/v1alpha1
+github.com/openshift/client-go/config/informers/externalversions/config/v1alpha2
+github.com/openshift/client-go/config/informers/externalversions/internalinterfaces
+github.com/openshift/client-go/config/listers/config/v1
+github.com/openshift/client-go/config/listers/config/v1alpha1
+github.com/openshift/client-go/config/listers/config/v1alpha2
 github.com/openshift/client-go/operator/applyconfigurations/internal
 github.com/openshift/client-go/operator/applyconfigurations/operator/v1
 github.com/openshift/client-go/route/applyconfigurations/internal
@@ -280,6 +303,7 @@ github.com/openshift/client-go/route/clientset/versioned/typed/route/v1
 ## explicit; go 1.24.0
 github.com/openshift/library-go/pkg/apiserver/jsonpatch
 github.com/openshift/library-go/pkg/authorization/hardcodedauthorizer
+github.com/openshift/library-go/pkg/certs
 github.com/openshift/library-go/pkg/config/client
 github.com/openshift/library-go/pkg/config/clusterstatus
 github.com/openshift/library-go/pkg/config/configdefaults
@@ -291,6 +315,10 @@ github.com/openshift/library-go/pkg/controller/factory
 github.com/openshift/library-go/pkg/controller/fileobserver
 github.com/openshift/library-go/pkg/crypto
 github.com/openshift/library-go/pkg/network
+github.com/openshift/library-go/pkg/operator/certrotation
+github.com/openshift/library-go/pkg/operator/condition
+github.com/openshift/library-go/pkg/operator/configobserver
+github.com/openshift/library-go/pkg/operator/configobserver/apiserver
 github.com/openshift/library-go/pkg/operator/events
 github.com/openshift/library-go/pkg/operator/loglevel
 github.com/openshift/library-go/pkg/operator/management
@@ -298,6 +326,7 @@ github.com/openshift/library-go/pkg/operator/resource/resourceapply
 github.com/openshift/library-go/pkg/operator/resource/resourcehelper
 github.com/openshift/library-go/pkg/operator/resource/resourcemerge
 github.com/openshift/library-go/pkg/operator/resource/resourceread
+github.com/openshift/library-go/pkg/operator/resourcesynccontroller
 github.com/openshift/library-go/pkg/operator/v1helpers
 github.com/openshift/library-go/pkg/serviceability
 # github.com/pkg/errors v0.9.1
