@@ -35,6 +35,9 @@ entries:
   - name: secondaryscheduleroperator.v1.5.0
     replaces: secondaryscheduleroperator.v1.4.0
     skipRange: '>=1.4.0 <1.5.0'
+  - name: secondaryscheduleroperator.v1.5.1
+    replaces: secondaryscheduleroperator.v1.4.0
+    skipRange: '>=1.4.0 <1.5.1'
     skips:
     - secondaryscheduleroperator.v1.1.0
     - secondaryscheduleroperator.v1.1.1
@@ -64,6 +67,7 @@ entries:
     - secondaryscheduleroperator.v1.4.4
     - secondaryscheduleroperator.v1.4.5
     - secondaryscheduleroperator.v1.4.6
+    - secondaryscheduleroperator.v1.5.0
   name: stable
   package: openshift-secondary-scheduler-operator
   schema: olm.channel
@@ -105,5 +109,8 @@ entries:
   schema: olm.bundle
 # secondaryscheduleroperator.v1.5.0
 - image: registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:a3667f085cb4f043f342d2470471e016fd50ddd4aed83ec88365a01709bc5732
+  schema: olm.bundle
+# secondaryscheduleroperator.v1.5.1
+- image: registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:36bbb89de21a2a8e6f024bf0299af955449eda266ee79fa81c6fa5abba8f3772
   schema: olm.bundle
 schema: olm.template.basic
