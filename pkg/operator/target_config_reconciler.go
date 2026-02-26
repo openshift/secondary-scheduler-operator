@@ -159,6 +159,46 @@ func (c TargetConfigReconciler) sync(item queueItem) error {
 		specAnnotations["clusterrolebindings/secondary-scheduler"] = resourceVersion
 	}
 
+	if service, _, err := c.manageService(secondaryScheduler); err != nil {
+		return err
+	} else {
+		resourceVersion := "0"
+		if service != nil { // SyncConfigMap can return nil
+			resourceVersion = service.ObjectMeta.ResourceVersion
+		}
+		specAnnotations["services/secondary-scheduler"] = resourceVersion
+	}
+
+	if role, _, err := c.manageRole(secondaryScheduler); err != nil {
+		return err
+	} else {
+		resourceVersion := "0"
+		if role != nil { // SyncConfigMap can return nil
+			resourceVersion = role.ObjectMeta.ResourceVersion
+		}
+		specAnnotations["roles/secondary-scheduler"] = resourceVersion
+	}
+
+	if roleBinding, _, err := c.manageRoleBinding(secondaryScheduler); err != nil {
+		return err
+	} else {
+		resourceVersion := "0"
+		if roleBinding != nil { // SyncConfigMap can return nil
+			resourceVersion = roleBinding.ObjectMeta.ResourceVersion
+		}
+		specAnnotations["rolebindings/secondary-scheduler"] = resourceVersion
+	}
+
+	if serviceMonitor, _, err := c.manageServiceMonitor(secondaryScheduler); err != nil {
+		return err
+	} else {
+		resourceVersion := "0"
+		if serviceMonitor != nil { // SyncConfigMap can return nil
+			resourceVersion = serviceMonitor.GetResourceVersion()
+		}
+		specAnnotations["servicemonitors/secondary-scheduler"] = resourceVersion
+	}
+
 	deployment, _, err := c.manageDeployment(secondaryScheduler, specAnnotations)
 	if err != nil {
 		return err
@@ -228,6 +268,62 @@ func (c *TargetConfigReconciler) manageClusterRoleBindings(secondaryScheduler *s
 	controller.EnsureOwnerRef(required, ownerReference)
 
 	return resourceapply.ApplyClusterRoleBinding(c.ctx, c.kubeClient.RbacV1(), c.eventRecorder, required)
+}
+
+func (c *TargetConfigReconciler) manageRole(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (*rbacv1.Role, bool, error) {
+	required := resourceread.ReadRoleV1OrDie(bindata.MustAsset("assets/secondary-scheduler/role.yaml"))
+	required.Namespace = secondaryScheduler.Namespace
+	ownerReference := metav1.OwnerReference{
+		APIVersion: "operator.openshift.io/v1",
+		Kind:       "SecondaryScheduler",
+		Name:       secondaryScheduler.Name,
+		UID:        secondaryScheduler.UID,
+	}
+	required.OwnerReferences = []metav1.OwnerReference{
+		ownerReference,
+	}
+	controller.EnsureOwnerRef(required, ownerReference)
+
+	return resourceapply.ApplyRole(c.ctx, c.kubeClient.RbacV1(), c.eventRecorder, required)
+}
+
+func (c *TargetConfigReconciler) manageRoleBinding(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (*rbacv1.RoleBinding, bool, error) {
+	required := resourceread.ReadRoleBindingV1OrDie(bindata.MustAsset("assets/secondary-scheduler/rolebinding.yaml"))
+	required.Namespace = secondaryScheduler.Namespace
+	ownerReference := metav1.OwnerReference{
+		APIVersion: "operator.openshift.io/v1",
+		Kind:       "SecondaryScheduler",
+		Name:       secondaryScheduler.Name,
+		UID:        secondaryScheduler.UID,
+	}
+	required.OwnerReferences = []metav1.OwnerReference{
+		ownerReference,
+	}
+	controller.EnsureOwnerRef(required, ownerReference)
+
+	return resourceapply.ApplyRoleBinding(c.ctx, c.kubeClient.RbacV1(), c.eventRecorder, required)
+}
+
+func (c *TargetConfigReconciler) manageService(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (*v1.Service, bool, error) {
+	required := resourceread.ReadServiceV1OrDie(bindata.MustAsset("assets/secondary-scheduler/service.yaml"))
+	required.Namespace = secondaryScheduler.Namespace
+	ownerReference := metav1.OwnerReference{
+		APIVersion: "operator.openshift.io/v1",
+		Kind:       "SecondaryScheduler",
+		Name:       secondaryScheduler.Name,
+		UID:        secondaryScheduler.UID,
+	}
+	required.OwnerReferences = []metav1.OwnerReference{
+		ownerReference,
+	}
+	controller.EnsureOwnerRef(required, ownerReference)
+
+	return resourceapply.ApplyService(c.ctx, c.kubeClient.CoreV1(), c.eventRecorder, required)
+}
+
+func (c *TargetConfigReconciler) manageServiceMonitor(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (*unstructured.Unstructured, bool, error) {
+	required := resourceread.ReadUnstructuredOrDie(bindata.MustAsset("assets/secondary-scheduler/servicemonitor.yaml"))
+	return resourceapply.ApplyKnownUnstructured(c.ctx, c.dynamicClient, c.eventRecorder, required)
 }
 
 func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler, specAnnotations map[string]string) (*appsv1.Deployment, bool, error) {
