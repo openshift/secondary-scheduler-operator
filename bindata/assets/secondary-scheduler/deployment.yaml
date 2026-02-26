@@ -34,6 +34,10 @@ spec:
             capabilities:
               drop: ["ALL"]
           image: ${IMAGE}
+          command:
+            - /bin/kube-scheduler
+          args:
+            - --config=/etc/kubernetes/config.yaml
           env:
           - name: ENABLE_OPENSHIFT_AUTH
             value: "true"
@@ -41,10 +45,22 @@ spec:
             requests:
               cpu: 15m
               memory: 50Mi
-          command:
-            - /bin/kube-scheduler
-          args:
-            - --config=/etc/kubernetes/config.yaml
+          ports:
+          - containerPort: 10259
+          livenessProbe:
+            httpGet:
+              scheme: HTTPS
+              port: 10259
+              path: healthz
+            initialDelaySeconds: 45
+            timeOutSeconds: 10
+          readinessProbe:
+            httpGet:
+              scheme: HTTPS
+              port: 10259
+              path: healthz
+            initialDelaySeconds: 45
+            timeOutSeconds: 10
           volumeMounts:
             - mountPath: "/etc/kubernetes"
               name: "etckubernetes"

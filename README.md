@@ -26,6 +26,14 @@ The Secondary Scheduler Operator provides the ability to deploy a customized sch
 
 ## Deploy the Operator
 
+### Build and run locally
+
+```sh
+$ make build
+$ make install-local
+$ make run-local
+```
+
 ### Quick Development
 
 1. Build and push the operator image to a registry:
