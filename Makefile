@@ -51,6 +51,17 @@ generate-clients:
 	GO=GO111MODULE=on GOFLAGS=-mod=readonly hack/update-codegen.sh
 .PHONY: generate-clients
 
+.PHONY: install-local
+install-local:
+	oc apply -f deploy/00_secondary-scheduler-operator.crd.yaml
+	oc apply -f deploy/01_namespace.yaml
+	oc apply -f deploy/06_configmap.yaml
+	oc apply -f deploy/07_secondary-scheduler-operator.cr.yaml
+
+.PHONY: run-local
+run-local:
+	./secondary-scheduler-operator operator --namespace openshift-secondary-scheduler-operator --kubeconfig ~/.kube/config
+
 clean:
 	$(RM) ./secondary-scheduler-operator
 	$(RM) -r ./_tmp

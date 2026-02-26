@@ -6,4 +6,4 @@ metadata:
 spec:
   managementState: Managed
   schedulerConfig: customized
-  schedulerImage: registry.k8s.io/scheduler-plugins/kube-scheduler:v0.27.8
+  schedulerImage: registry.k8s.io/scheduler-plugins/kube-scheduler:v0.33.5

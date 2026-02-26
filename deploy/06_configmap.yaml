@@ -7,25 +7,17 @@ data:
   "config.yaml": |
     apiVersion: kubescheduler.config.k8s.io/v1
     kind: KubeSchedulerConfiguration
-    leaderElection:
-      leaderElect: false
     profiles:
       - schedulerName: secondary-scheduler
+        pluginConfig:
+          - args:
+              scoringStrategy:
+                type: MostAllocated
+            name: NodeResourcesFit
         plugins:
           score:
             disabled:
-              - name: NodeResourcesBalancedAllocation
-              - name: NodeResourcesLeastAllocated
+            - name: "NodeResourcesBalancedAllocation"
             enabled:
-              - name: TargetLoadPacking
-        pluginConfig:
-          - name: TargetLoadPacking
-            args:
-              defaultRequests:
-                cpu: "2000m"
-              defaultRequestsMultiplier: "1"
-              targetUtilization: 70
-              metricProvider:
-                type: Prometheus
-                address: ${PROM_URL}
-                token: ${PROM_TOKEN}
+            - name: "NodeResourcesFit"
+              weight: 5
