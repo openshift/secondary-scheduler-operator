@@ -38,6 +38,7 @@ func setupFakeClients(t *testing.T, apiServer *configv1.APIServer) (
 	kubernetes.Interface,
 	v1helpers.KubeInformersForNamespaces,
 	configinformers.SharedInformerFactory,
+	operatorclientinformers.SharedInformerFactory,
 	dynamic.Interface,
 ) {
 	// Create SecondaryScheduler CR
@@ -107,18 +108,19 @@ func setupFakeClients(t *testing.T, apiServer *configv1.APIServer) (
 		OperatorClient: fakeOperatorConfigClient.SecondaryschedulersV1(),
 	}
 
-	return secondarySchedulerClient, fakeKubeClient, kubeInformersForNamespaces, configInformers, dynamicClient
+	return secondarySchedulerClient, fakeKubeClient, kubeInformersForNamespaces, configInformers, operatorConfigInformers, dynamicClient
 }
 
 // testSetup holds all the components needed for testing the reconciler
 type testSetup struct {
-	reconciler      *TargetConfigReconciler
-	operatorClient  *operatorclient.SecondarySchedulerClient
-	kubeClient      kubernetes.Interface
-	kubeInformers   v1helpers.KubeInformersForNamespaces
-	configInformers configinformers.SharedInformerFactory
-	eventRecorder   events.Recorder
-	configObserver  *configobservercontroller.ConfigObserver
+	reconciler              *TargetConfigReconciler
+	operatorClient          *operatorclient.SecondarySchedulerClient
+	kubeClient              kubernetes.Interface
+	kubeInformers           v1helpers.KubeInformersForNamespaces
+	configInformers         configinformers.SharedInformerFactory
+	operatorConfigInformers operatorclientinformers.SharedInformerFactory
+	eventRecorder           events.Recorder
+	configObserver          *configobservercontroller.ConfigObserver
 }
 
 // setupTestReconciler creates and initializes a TargetConfigReconciler for testing
@@ -128,7 +130,7 @@ func setupTestReconciler(
 	apiServer *configv1.APIServer,
 ) *testSetup {
 	// Setup fake clients
-	fakeOperatorClient, fakeKubeClient, kubeInformersForNamespaces, configInformers, dynamicClient := setupFakeClients(t, apiServer)
+	fakeOperatorClient, fakeKubeClient, kubeInformersForNamespaces, configInformers, operatorConfigInformers, dynamicClient := setupFakeClients(t, apiServer)
 
 	// Create event recorder
 	eventRecorder := events.NewInMemoryRecorder("", clock.RealClock{})
@@ -137,7 +139,7 @@ func setupTestReconciler(
 	targetConfigReconciler, err := NewTargetConfigReconciler(
 		ctx,
 		fakeOperatorClient.OperatorClient,
-		operatorclientinformers.NewSharedInformerFactory(operatorclientfake.NewSimpleClientset(), 10*time.Minute).Secondaryschedulers().V1().SecondarySchedulers(),
+		operatorConfigInformers.Secondaryschedulers().V1().SecondarySchedulers(),
 		kubeInformersForNamespaces,
 		fakeOperatorClient,
 		fakeKubeClient,
@@ -165,13 +167,14 @@ func setupTestReconciler(
 	)
 
 	return &testSetup{
-		reconciler:      targetConfigReconciler,
-		operatorClient:  fakeOperatorClient,
-		kubeClient:      fakeKubeClient,
-		kubeInformers:   kubeInformersForNamespaces,
-		configInformers: configInformers,
-		eventRecorder:   eventRecorder,
-		configObserver:  configObserver,
+		reconciler:              targetConfigReconciler,
+		operatorClient:          fakeOperatorClient,
+		kubeClient:              fakeKubeClient,
+		kubeInformers:           kubeInformersForNamespaces,
+		configInformers:         configInformers,
+		operatorConfigInformers: operatorConfigInformers,
+		eventRecorder:           eventRecorder,
+		configObserver:          configObserver,
 	}
 }
 
@@ -226,6 +229,7 @@ func TestManageDeployment_TLSConfiguration(t *testing.T) {
 			// Start informers after controllers have registered their event handlers
 			setup.kubeInformers.Start(ctx.Done())
 			setup.configInformers.Start(ctx.Done())
+			setup.operatorConfigInformers.Start(ctx.Done())
 
 			// Validate that operator spec doesn't have observed config before running config observer
 			if specBefore, err := setup.operatorClient.OperatorClient.SecondarySchedulers(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperatorConfigName, metav1.GetOptions{}); err != nil {
