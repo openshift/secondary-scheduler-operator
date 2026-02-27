@@ -33,6 +33,83 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
+func setupFakeClients(t *testing.T, apiServer *configv1.APIServer) (
+	*operatorclient.SecondarySchedulerClient,
+	kubernetes.Interface,
+	v1helpers.KubeInformersForNamespaces,
+	configinformers.SharedInformerFactory,
+	dynamic.Interface,
+) {
+	// Create SecondaryScheduler CR
+	secondaryScheduler := &secondaryschedulersv1.SecondaryScheduler{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      operatorclient.OperatorConfigName,
+			Namespace: operatorclient.OperatorNamespace,
+		},
+		Spec: secondaryschedulersv1.SecondarySchedulerSpec{
+			OperatorSpec: operatorv1.OperatorSpec{
+				ManagementState: operatorv1.Managed,
+			},
+			SchedulerImage:  "test-image",
+			SchedulerConfig: "test-config",
+		},
+	}
+
+	// Create required ConfigMap
+	configMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "test-config",
+			Namespace:       operatorclient.OperatorNamespace,
+			ResourceVersion: "1",
+		},
+		Data: map[string]string{
+			"config.yaml": "{}",
+		},
+	}
+
+	// Setup kube client with required resources
+	fakeKubeClient := kubefake.NewSimpleClientset(configMap)
+	kubeInformersForNamespaces := v1helpers.NewKubeInformersForNamespaces(
+		fakeKubeClient,
+		"",
+		operatorclient.OperatorNamespace,
+	)
+
+	// Add configmap to informer cache
+	kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Informer().GetIndexer().Add(configMap)
+
+	// Build list of objects to pre-populate the fake config client
+	configObjects := []runtime.Object{}
+	if apiServer != nil {
+		configObjects = append(configObjects, apiServer)
+	}
+	fakeConfigClient := configfake.NewSimpleClientset(configObjects...)
+	configInformers := configinformers.NewSharedInformerFactory(fakeConfigClient, 0)
+
+	// Populate required informer caches
+	if apiServer != nil {
+		configInformers.Config().V1().APIServers().Informer().GetIndexer().Add(apiServer)
+	}
+
+	// Create fake dynamic client
+	dynamicClient := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
+
+	// Create fake operator client
+	fakeOperatorConfigClient := operatorclientfake.NewSimpleClientset(secondaryScheduler)
+	operatorConfigInformers := operatorclientinformers.NewSharedInformerFactory(fakeOperatorConfigClient, 10*time.Minute)
+
+	// Add SecondaryScheduler to informer cache
+	operatorConfigInformers.Secondaryschedulers().V1().SecondarySchedulers().Informer().GetIndexer().Add(secondaryScheduler)
+
+	secondarySchedulerClient := &operatorclient.SecondarySchedulerClient{
+		Ctx:            context.TODO(),
+		SharedInformer: operatorConfigInformers.Secondaryschedulers().V1().SecondarySchedulers().Informer(),
+		OperatorClient: fakeOperatorConfigClient.SecondaryschedulersV1(),
+	}
+
+	return secondarySchedulerClient, fakeKubeClient, kubeInformersForNamespaces, configInformers, dynamicClient
+}
+
 func TestManageDeployment_TLSConfiguration(t *testing.T) {
 	// Get the default Intermediate TLS profile
 	intermediateProfile := configv1.TLSProfiles[configv1.TLSProfileIntermediateType]
@@ -179,83 +256,6 @@ func TestManageDeployment_TLSConfiguration(t *testing.T) {
 			}
 		})
 	}
-}
-
-func setupFakeClients(t *testing.T, apiServer *configv1.APIServer) (
-	*operatorclient.SecondarySchedulerClient,
-	kubernetes.Interface,
-	v1helpers.KubeInformersForNamespaces,
-	configinformers.SharedInformerFactory,
-	dynamic.Interface,
-) {
-	// Create SecondaryScheduler CR
-	secondaryScheduler := &secondaryschedulersv1.SecondaryScheduler{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      operatorclient.OperatorConfigName,
-			Namespace: operatorclient.OperatorNamespace,
-		},
-		Spec: secondaryschedulersv1.SecondarySchedulerSpec{
-			OperatorSpec: operatorv1.OperatorSpec{
-				ManagementState: operatorv1.Managed,
-			},
-			SchedulerImage:  "test-image",
-			SchedulerConfig: "test-config",
-		},
-	}
-
-	// Create required ConfigMap
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            "test-config",
-			Namespace:       operatorclient.OperatorNamespace,
-			ResourceVersion: "1",
-		},
-		Data: map[string]string{
-			"config.yaml": "{}",
-		},
-	}
-
-	// Setup kube client with required resources
-	fakeKubeClient := kubefake.NewSimpleClientset(configMap)
-	kubeInformersForNamespaces := v1helpers.NewKubeInformersForNamespaces(
-		fakeKubeClient,
-		"",
-		operatorclient.OperatorNamespace,
-	)
-
-	// Add configmap to informer cache
-	kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Informer().GetIndexer().Add(configMap)
-
-	// Build list of objects to pre-populate the fake config client
-	configObjects := []runtime.Object{}
-	if apiServer != nil {
-		configObjects = append(configObjects, apiServer)
-	}
-	fakeConfigClient := configfake.NewSimpleClientset(configObjects...)
-	configInformers := configinformers.NewSharedInformerFactory(fakeConfigClient, 0)
-
-	// Populate required informer caches
-	if apiServer != nil {
-		configInformers.Config().V1().APIServers().Informer().GetIndexer().Add(apiServer)
-	}
-
-	// Create fake dynamic client
-	dynamicClient := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
-
-	// Create fake operator client
-	fakeOperatorConfigClient := operatorclientfake.NewSimpleClientset(secondaryScheduler)
-	operatorConfigInformers := operatorclientinformers.NewSharedInformerFactory(fakeOperatorConfigClient, 10*time.Minute)
-
-	// Add SecondaryScheduler to informer cache
-	operatorConfigInformers.Secondaryschedulers().V1().SecondarySchedulers().Informer().GetIndexer().Add(secondaryScheduler)
-
-	secondarySchedulerClient := &operatorclient.SecondarySchedulerClient{
-		Ctx:            context.TODO(),
-		SharedInformer: operatorConfigInformers.Secondaryschedulers().V1().SecondarySchedulers().Informer(),
-		OperatorClient: fakeOperatorConfigClient.SecondaryschedulersV1(),
-	}
-
-	return secondarySchedulerClient, fakeKubeClient, kubeInformersForNamespaces, configInformers, dynamicClient
 }
 
 // fakeSyncContext implements factory.SyncContext for testing
