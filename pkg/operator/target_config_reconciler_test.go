@@ -23,7 +23,10 @@ import (
 	"github.com/openshift/secondary-scheduler-operator/pkg/operator/configobservation/configobservercontroller"
 	"github.com/openshift/secondary-scheduler-operator/pkg/operator/operatorclient"
 
+	"github.com/google/go-cmp/cmp"
+
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
@@ -33,19 +36,27 @@ import (
 	"k8s.io/client-go/util/workqueue"
 )
 
-func setupFakeClients(t *testing.T, apiServer *configv1.APIServer) (
-	*operatorclient.SecondarySchedulerClient,
-	kubernetes.Interface,
-	v1helpers.KubeInformersForNamespaces,
-	configinformers.SharedInformerFactory,
-	operatorclientinformers.SharedInformerFactory,
-	dynamic.Interface,
-) {
-	// Create SecondaryScheduler CR
-	secondaryScheduler := &secondaryschedulersv1.SecondaryScheduler{
+const (
+	secondarySchedulerUID = "a1b2c3d4-e5f6-7a8b-9c0d-e1f2a3b4c5d6"
+)
+
+func newOwnerReference() []metav1.OwnerReference {
+	return []metav1.OwnerReference{
+		{
+			APIVersion: "operator.openshift.io/v1",
+			Kind:       "SecondaryScheduler",
+			Name:       operatorclient.OperatorConfigName,
+			UID:        secondarySchedulerUID,
+		},
+	}
+}
+
+func newSecondaryScheduler(apply func(ss *secondaryschedulersv1.SecondaryScheduler)) *secondaryschedulersv1.SecondaryScheduler {
+	obj := &secondaryschedulersv1.SecondaryScheduler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      operatorclient.OperatorConfigName,
 			Namespace: operatorclient.OperatorNamespace,
+			UID:       secondarySchedulerUID,
 		},
 		Spec: secondaryschedulersv1.SecondarySchedulerSpec{
 			OperatorSpec: operatorv1.OperatorSpec{
@@ -54,12 +65,39 @@ func setupFakeClients(t *testing.T, apiServer *configv1.APIServer) (
 			SchedulerImage:  "test-image",
 			SchedulerConfig: "test-config",
 		},
+		Status: secondaryschedulersv1.SecondarySchedulerStatus{
+			OperatorStatus: operatorv1.OperatorStatus{
+				Generations: []operatorv1.GenerationStatus{
+					{
+						Group:          "apps",
+						Resource:       "deployments",
+						Namespace:      operatorclient.OperatorNamespace,
+						Name:           operatorclient.OperandName,
+						LastGeneration: 0,
+					},
+				},
+			},
+		},
 	}
+	if apply != nil {
+		apply(obj)
+	}
+	return obj
+}
+
+func setupFakeClients(t *testing.T, apiServer *configv1.APIServer, secondaryScheduler *secondaryschedulersv1.SecondaryScheduler, coreObjects []runtime.Object) (
+	*operatorclient.SecondarySchedulerClient,
+	kubernetes.Interface,
+	v1helpers.KubeInformersForNamespaces,
+	configinformers.SharedInformerFactory,
+	operatorclientinformers.SharedInformerFactory,
+	dynamic.Interface,
+) {
 
 	// Create required ConfigMap
 	configMap := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            "test-config",
+			Name:            secondaryScheduler.Spec.SchedulerConfig,
 			Namespace:       operatorclient.OperatorNamespace,
 			ResourceVersion: "1",
 		},
@@ -68,16 +106,25 @@ func setupFakeClients(t *testing.T, apiServer *configv1.APIServer) (
 		},
 	}
 
+	allCoreObjects := append([]runtime.Object{configMap}, coreObjects...)
+
 	// Setup kube client with required resources
-	fakeKubeClient := kubefake.NewSimpleClientset(configMap)
+	fakeKubeClient := kubefake.NewSimpleClientset(allCoreObjects...)
 	kubeInformersForNamespaces := v1helpers.NewKubeInformersForNamespaces(
 		fakeKubeClient,
 		"",
 		operatorclient.OperatorNamespace,
 	)
 
-	// Add configmap to informer cache
-	kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Informer().GetIndexer().Add(configMap)
+	// Add all core objects to informer cache
+	for _, obj := range allCoreObjects {
+		switch v := obj.(type) {
+		case *corev1.ConfigMap:
+			kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Informer().GetIndexer().Add(v)
+		case *corev1.ServiceAccount:
+			kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ServiceAccounts().Informer().GetIndexer().Add(v)
+		}
+	}
 
 	// Build list of objects to pre-populate the fake config client
 	configObjects := []runtime.Object{}
@@ -128,9 +175,11 @@ func setupTestReconciler(
 	t *testing.T,
 	ctx context.Context,
 	apiServer *configv1.APIServer,
+	secondaryScheduler *secondaryschedulersv1.SecondaryScheduler,
+	coreObjects []runtime.Object,
 ) *testSetup {
 	// Setup fake clients
-	fakeOperatorClient, fakeKubeClient, kubeInformersForNamespaces, configInformers, operatorConfigInformers, dynamicClient := setupFakeClients(t, apiServer)
+	fakeOperatorClient, fakeKubeClient, kubeInformersForNamespaces, configInformers, operatorConfigInformers, dynamicClient := setupFakeClients(t, apiServer, secondaryScheduler, coreObjects)
 
 	// Create event recorder
 	eventRecorder := events.NewInMemoryRecorder("", clock.RealClock{})
@@ -224,7 +273,7 @@ func TestManageDeployment_TLSConfiguration(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.TODO())
 			defer cancel()
 
-			setup := setupTestReconciler(t, ctx, tt.apiServer)
+			setup := setupTestReconciler(t, ctx, tt.apiServer, newSecondaryScheduler(nil), nil)
 
 			// Start informers after controllers have registered their event handlers
 			setup.kubeInformers.Start(ctx.Done())
@@ -289,6 +338,94 @@ func TestManageDeployment_TLSConfiguration(t *testing.T) {
 				t.Errorf("Expected to find --tls-min-version arg but didn't")
 			}
 		})
+	}
+}
+
+func TestManageServiceAccount(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(nil), nil)
+
+	setup.kubeInformers.Start(ctx.Done())
+	setup.configInformers.Start(ctx.Done())
+	setup.operatorConfigInformers.Start(ctx.Done())
+
+	secondaryScheduler, err := setup.operatorClient.OperatorClient.SecondarySchedulers(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperatorConfigName, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("Failed to get SecondaryScheduler: %v", err)
+	}
+
+	t.Run("Phase 1: no ServiceAccount exists initially", func(t *testing.T) {
+		_, err := setup.kubeClient.CoreV1().ServiceAccounts(operatorclient.OperatorNamespace).Get(ctx, "secondary-scheduler", metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
+			t.Fatalf("Expected ServiceAccount to not exist (NotFound error), got: %v", err)
+		}
+	})
+
+	t.Run("Phase 2: manageServiceAccount creates ServiceAccount", func(t *testing.T) {
+		sa, modified, err := setup.reconciler.manageServiceAccount(secondaryScheduler)
+		if err != nil {
+			t.Fatalf("manageServiceAccount failed: %v", err)
+		}
+
+		if !modified {
+			t.Error("Expected modified=true when creating ServiceAccount, got false")
+		}
+
+		actualSA, err := setup.kubeClient.CoreV1().ServiceAccounts(operatorclient.OperatorNamespace).Get(ctx, "secondary-scheduler", metav1.GetOptions{})
+		if err != nil {
+			t.Fatalf("Failed to get ServiceAccount after creation: %v", err)
+		}
+
+		// Verify the returned ServiceAccount matches what we got from the client
+		if sa.Name != actualSA.Name {
+			t.Errorf("Returned ServiceAccount name %q doesn't match actual %q", sa.Name, actualSA.Name)
+		}
+		if sa.ResourceVersion != actualSA.ResourceVersion {
+			t.Errorf("Returned ServiceAccount ResourceVersion %q doesn't match actual %q", sa.ResourceVersion, actualSA.ResourceVersion)
+		}
+
+		verifyNamespace(t, actualSA)
+		verifyOwnerReference(t, actualSA)
+	})
+
+	t.Run("Phase 3: manageServiceAccount with no changes returns modified=false", func(t *testing.T) {
+		_, modified, err := setup.reconciler.manageServiceAccount(secondaryScheduler)
+		if err != nil {
+			t.Fatalf("manageServiceAccount failed: %v", err)
+		}
+
+		if modified {
+			t.Error("Expected modified=false when no changes needed, got true")
+		}
+
+		actualSA, err := setup.kubeClient.CoreV1().ServiceAccounts(operatorclient.OperatorNamespace).Get(ctx, "secondary-scheduler", metav1.GetOptions{})
+		if err != nil {
+			t.Fatalf("Failed to get ServiceAccount: %v", err)
+		}
+		verifyOwnerReference(t, actualSA)
+	})
+}
+
+func verifyOwnerReference(t *testing.T, obj metav1.Object) {
+	t.Helper()
+	if diff := cmp.Diff(newOwnerReference(), obj.GetOwnerReferences()); diff != "" {
+		t.Errorf("OwnerReferences mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func verifyNamespace(t *testing.T, obj metav1.Object) {
+	t.Helper()
+	if obj.GetNamespace() != operatorclient.OperatorNamespace {
+		t.Errorf("Expected Namespace=%q, got %q", operatorclient.OperatorNamespace, obj.GetNamespace())
+	}
+}
+
+func verifyName(t *testing.T, obj metav1.Object) {
+	t.Helper()
+	if obj.GetName() != operatorclient.OperandName {
+		t.Errorf("Expected Name=%q, got %q", operatorclient.OperandName, obj.GetName())
 	}
 }
 
