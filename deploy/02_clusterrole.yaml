@@ -23,6 +23,7 @@ rules:
   - serviceaccounts
   - configmaps
   - events
+  - services
   verbs:
   - create
   - delete
@@ -44,6 +45,8 @@ rules:
   - rbac.authorization.k8s.io
   resources:
   - clusterrolebindings
+  - roles
+  - rolebindings
   verbs:
   - create
   - delete
@@ -85,3 +88,14 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+  - update
+  - patch

@@ -23,6 +23,7 @@ rules:
   - serviceaccounts
   - configmaps
   - events
+  - services
   verbs:
   - create
   - delete
@@ -33,11 +34,28 @@ rules:
   - update
   - watch
 - apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - rbac.authorization.k8s.io
   resources:
   - clusterrolebindings
+  - roles
+  - rolebindings
   verbs:
-  - '*'
+  - create
+  - delete
+  - deletecollection
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - apps
   resources:
@@ -61,3 +79,23 @@ rules:
   - list
   - create
   - update
+- apiGroups:
+  - config.openshift.io
+  resources:
+  - infrastructures
+  - apiservers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - get
+  - watch
+  - list
+  - create
+  - update
+  - patch
