@@ -23,6 +23,8 @@ import (
 	"github.com/openshift/secondary-scheduler-operator/pkg/operator/configobservation/configobservercontroller"
 	"github.com/openshift/secondary-scheduler-operator/pkg/operator/operatorclient"
 
+	"github.com/google/go-cmp/cmp"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,6 +34,44 @@ import (
 	kubefake "k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/util/workqueue"
 )
+
+const (
+	secondarySchedulerUID = "a1b2c3d4-e5f6-7a8b-9c0d-e1f2a3b4c5d6"
+	serviceAccountUID     = "b2c3d4e5-f6a7-8b9c-0d1e-2f3a4b5c6d7e"
+)
+
+// normalizeObjectMeta converts empty maps to nil for Labels and Annotations
+func normalizeObjectMeta(meta *metav1.ObjectMeta) {
+	if len(meta.Labels) == 0 {
+		meta.Labels = nil
+	}
+	if len(meta.Annotations) == 0 {
+		meta.Annotations = nil
+	}
+}
+
+// newExpectedServiceAccount creates a ServiceAccount with the expected structure for testing
+func newExpectedServiceAccount() *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ServiceAccount",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        "secondary-scheduler",
+			Namespace:   operatorclient.OperatorNamespace,
+			UID:         serviceAccountUID,
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "operator.openshift.io/v1",
+					Kind:       "SecondaryScheduler",
+					Name:       operatorclient.OperatorConfigName,
+					UID:        secondarySchedulerUID,
+				},
+			},
+		},
+	}
+}
 
 func TestManageDeployment_TLSConfiguration(t *testing.T) {
 	// Get the default Intermediate TLS profile
@@ -80,7 +120,7 @@ func TestManageDeployment_TLSConfiguration(t *testing.T) {
 			defer cancel()
 
 			// Setup fake clients with all required resources
-			fakeOperatorClient, fakeKubeClient, kubeInformersForNamespaces, configInformers, dynamicClient := setupFakeClients(t, tt.apiServer)
+			fakeOperatorClient, fakeKubeClient, kubeInformersForNamespaces, configInformers, dynamicClient := setupFakeClients(t, tt.apiServer, nil)
 
 			// Create event recorder
 			eventRecorder := events.NewInMemoryRecorder("", clock.RealClock{})
@@ -181,7 +221,7 @@ func TestManageDeployment_TLSConfiguration(t *testing.T) {
 	}
 }
 
-func setupFakeClients(t *testing.T, apiServer *configv1.APIServer) (
+func setupFakeClients(t *testing.T, apiServer *configv1.APIServer, coreObjects []runtime.Object) (
 	*operatorclient.SecondarySchedulerClient,
 	kubernetes.Interface,
 	v1helpers.KubeInformersForNamespaces,
@@ -193,6 +233,7 @@ func setupFakeClients(t *testing.T, apiServer *configv1.APIServer) (
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      operatorclient.OperatorConfigName,
 			Namespace: operatorclient.OperatorNamespace,
+			UID:       secondarySchedulerUID,
 		},
 		Spec: secondaryschedulersv1.SecondarySchedulerSpec{
 			OperatorSpec: operatorv1.OperatorSpec{
@@ -215,16 +256,26 @@ func setupFakeClients(t *testing.T, apiServer *configv1.APIServer) (
 		},
 	}
 
+	// Combine default objects with provided ones
+	allCoreObjects := append([]runtime.Object{configMap}, coreObjects...)
+
 	// Setup kube client with required resources
-	fakeKubeClient := kubefake.NewSimpleClientset(configMap)
+	fakeKubeClient := kubefake.NewSimpleClientset(allCoreObjects...)
 	kubeInformersForNamespaces := v1helpers.NewKubeInformersForNamespaces(
 		fakeKubeClient,
 		"",
 		operatorclient.OperatorNamespace,
 	)
 
-	// Add configmap to informer cache
-	kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Informer().GetIndexer().Add(configMap)
+	// Add all core objects to informer cache
+	for _, obj := range allCoreObjects {
+		switch v := obj.(type) {
+		case *corev1.ConfigMap:
+			kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Informer().GetIndexer().Add(v)
+		case *corev1.ServiceAccount:
+			kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ServiceAccounts().Informer().GetIndexer().Add(v)
+		}
+	}
 
 	// Build list of objects to pre-populate the fake config client
 	configObjects := []runtime.Object{}
@@ -256,6 +307,144 @@ func setupFakeClients(t *testing.T, apiServer *configv1.APIServer) (
 	}
 
 	return secondarySchedulerClient, fakeKubeClient, kubeInformersForNamespaces, configInformers, dynamicClient
+}
+
+func TestManageServiceAccount(t *testing.T) {
+	tests := []struct {
+		name                   string
+		existingServiceAccount *corev1.ServiceAccount
+		expectedServiceAccount *corev1.ServiceAccount
+		expectModified         bool
+	}{
+		{
+			name:                   "no previous ServiceAccount exists",
+			existingServiceAccount: nil,
+			expectedServiceAccount: newExpectedServiceAccount(),
+			expectModified:         true,
+		},
+		{
+			name: "ServiceAccount already exists with correct config",
+			existingServiceAccount: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "secondary-scheduler",
+					Namespace:       operatorclient.OperatorNamespace,
+					UID:             serviceAccountUID,
+					ResourceVersion: "1",
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "operator.openshift.io/v1",
+							Kind:       "SecondaryScheduler",
+							Name:       operatorclient.OperatorConfigName,
+							UID:        secondarySchedulerUID,
+						},
+					},
+				},
+			},
+			expectedServiceAccount: newExpectedServiceAccount(),
+			expectModified:         false,
+		},
+		{
+			name: "ServiceAccount exists but needs update (missing owner reference)",
+			existingServiceAccount: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "secondary-scheduler",
+					Namespace:       operatorclient.OperatorNamespace,
+					UID:             serviceAccountUID,
+					ResourceVersion: "1",
+				},
+			},
+			expectedServiceAccount: newExpectedServiceAccount(),
+			expectModified:         true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.TODO())
+			defer cancel()
+
+			// Setup fake clients, passing existing ServiceAccount if provided
+			var coreObjects []runtime.Object
+			if tt.existingServiceAccount != nil {
+				coreObjects = append(coreObjects, tt.existingServiceAccount)
+			}
+			fakeOperatorClient, fakeKubeClient, kubeInformersForNamespaces, configInformers, dynamicClient := setupFakeClients(t, nil, coreObjects)
+
+			// Create event recorder
+			eventRecorder := events.NewInMemoryRecorder("", clock.RealClock{})
+
+			// Create target config reconciler
+			targetConfigReconciler, err := NewTargetConfigReconciler(
+				ctx,
+				fakeOperatorClient.OperatorClient,
+				operatorclientinformers.NewSharedInformerFactory(operatorclientfake.NewSimpleClientset(), 10*time.Minute).Secondaryschedulers().V1().SecondarySchedulers(),
+				kubeInformersForNamespaces,
+				fakeOperatorClient,
+				fakeKubeClient,
+				nil, // osrClient not needed for this test
+				dynamicClient,
+				eventRecorder,
+			)
+			if err != nil {
+				t.Fatalf("Failed to create target config reconciler: %v", err)
+			}
+
+			// Start informers
+			kubeInformersForNamespaces.Start(ctx.Done())
+			configInformers.Start(ctx.Done())
+
+			// Get the SecondaryScheduler object
+			secondaryScheduler, err := fakeOperatorClient.OperatorClient.SecondarySchedulers(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperatorConfigName, metav1.GetOptions{})
+			if err != nil {
+				t.Fatalf("Failed to get SecondaryScheduler: %v", err)
+			}
+
+			// Call manageServiceAccount directly
+			sa, modified, err := targetConfigReconciler.manageServiceAccount(secondaryScheduler)
+			if err != nil {
+				t.Fatalf("manageServiceAccount failed: %v", err)
+			}
+
+			// Verify the ServiceAccount was created/updated
+			actualSA, err := fakeKubeClient.CoreV1().ServiceAccounts(operatorclient.OperatorNamespace).Get(ctx, "secondary-scheduler", metav1.GetOptions{})
+			if err != nil {
+				t.Fatalf("Failed to get ServiceAccount: %v", err)
+			}
+
+			// Verify the modified flag
+			if modified != tt.expectModified {
+				t.Errorf("Expected modified=%v, got modified=%v", tt.expectModified, modified)
+			}
+
+			// Copy auto-generated fields from actual to expected for comparison
+			expected := tt.expectedServiceAccount.DeepCopy()
+			expected.ResourceVersion = actualSA.ResourceVersion
+			expected.CreationTimestamp = actualSA.CreationTimestamp
+			// For newly created ServiceAccounts (no existing SA), UID is auto-generated
+			if tt.existingServiceAccount == nil {
+				expected.UID = actualSA.UID
+			}
+
+			// The fake client doesn't preserve TypeMeta, so copy it from expected to actual for comparison
+			actualSA.TypeMeta = expected.TypeMeta
+
+			normalizeObjectMeta(&expected.ObjectMeta)
+			normalizeObjectMeta(&actualSA.ObjectMeta)
+
+			// Compare using cmp.Diff which shows the actual differences
+			if diff := cmp.Diff(expected, actualSA); diff != "" {
+				t.Errorf("ServiceAccount mismatch (-want +got):\n%s", diff)
+			}
+
+			// Verify the returned ServiceAccount matches what we got from the client
+			if sa.Name != actualSA.Name {
+				t.Errorf("Returned ServiceAccount name %q doesn't match actual %q", sa.Name, actualSA.Name)
+			}
+			if sa.ResourceVersion != actualSA.ResourceVersion {
+				t.Errorf("Returned ServiceAccount ResourceVersion %q doesn't match actual %q", sa.ResourceVersion, actualSA.ResourceVersion)
+			}
+		})
+	}
 }
 
 // fakeSyncContext implements factory.SyncContext for testing
