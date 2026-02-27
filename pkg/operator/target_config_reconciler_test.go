@@ -110,6 +110,71 @@ func setupFakeClients(t *testing.T, apiServer *configv1.APIServer) (
 	return secondarySchedulerClient, fakeKubeClient, kubeInformersForNamespaces, configInformers, dynamicClient
 }
 
+// testSetup holds all the components needed for testing the reconciler
+type testSetup struct {
+	reconciler      *TargetConfigReconciler
+	operatorClient  *operatorclient.SecondarySchedulerClient
+	kubeClient      kubernetes.Interface
+	kubeInformers   v1helpers.KubeInformersForNamespaces
+	configInformers configinformers.SharedInformerFactory
+	eventRecorder   events.Recorder
+	configObserver  *configobservercontroller.ConfigObserver
+}
+
+// setupTestReconciler creates and initializes a TargetConfigReconciler for testing
+func setupTestReconciler(
+	t *testing.T,
+	ctx context.Context,
+	apiServer *configv1.APIServer,
+) *testSetup {
+	// Setup fake clients
+	fakeOperatorClient, fakeKubeClient, kubeInformersForNamespaces, configInformers, dynamicClient := setupFakeClients(t, apiServer)
+
+	// Create event recorder
+	eventRecorder := events.NewInMemoryRecorder("", clock.RealClock{})
+
+	// Create target config reconciler
+	targetConfigReconciler, err := NewTargetConfigReconciler(
+		ctx,
+		fakeOperatorClient.OperatorClient,
+		operatorclientinformers.NewSharedInformerFactory(operatorclientfake.NewSimpleClientset(), 10*time.Minute).Secondaryschedulers().V1().SecondarySchedulers(),
+		kubeInformersForNamespaces,
+		fakeOperatorClient,
+		fakeKubeClient,
+		nil, // osrClient not needed for tests
+		dynamicClient,
+		eventRecorder,
+	)
+	if err != nil {
+		t.Fatalf("Failed to create target config reconciler: %v", err)
+	}
+
+	// Create config observer - this registers event handlers with informers
+	configObserver := configobservercontroller.NewConfigObserver(
+		fakeOperatorClient,
+		configInformers,
+		resourcesynccontroller.NewResourceSyncController(
+			"SecondarySchedulerOperator",
+			fakeOperatorClient,
+			kubeInformersForNamespaces,
+			fakeKubeClient.CoreV1(),
+			fakeKubeClient.CoreV1(),
+			eventRecorder,
+		),
+		eventRecorder,
+	)
+
+	return &testSetup{
+		reconciler:      targetConfigReconciler,
+		operatorClient:  fakeOperatorClient,
+		kubeClient:      fakeKubeClient,
+		kubeInformers:   kubeInformersForNamespaces,
+		configInformers: configInformers,
+		eventRecorder:   eventRecorder,
+		configObserver:  configObserver,
+	}
+}
+
 func TestManageDeployment_TLSConfiguration(t *testing.T) {
 	// Get the default Intermediate TLS profile
 	intermediateProfile := configv1.TLSProfiles[configv1.TLSProfileIntermediateType]
@@ -156,49 +221,14 @@ func TestManageDeployment_TLSConfiguration(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.TODO())
 			defer cancel()
 
-			// Setup fake clients with all required resources
-			fakeOperatorClient, fakeKubeClient, kubeInformersForNamespaces, configInformers, dynamicClient := setupFakeClients(t, tt.apiServer)
-
-			// Create event recorder
-			eventRecorder := events.NewInMemoryRecorder("", clock.RealClock{})
-
-			// Create config observer - this registers event handlers with informers
-			configObserver := configobservercontroller.NewConfigObserver(
-				fakeOperatorClient,
-				configInformers,
-				resourcesynccontroller.NewResourceSyncController(
-					"SecondarySchedulerOperator",
-					fakeOperatorClient,
-					kubeInformersForNamespaces,
-					fakeKubeClient.CoreV1(),
-					fakeKubeClient.CoreV1(),
-					eventRecorder,
-				),
-				eventRecorder,
-			)
-
-			// Create target config reconciler - this registers event handlers with informers
-			targetConfigReconciler, err := NewTargetConfigReconciler(
-				ctx,
-				fakeOperatorClient.OperatorClient,
-				operatorclientinformers.NewSharedInformerFactory(operatorclientfake.NewSimpleClientset(), 10*time.Minute).Secondaryschedulers().V1().SecondarySchedulers(),
-				kubeInformersForNamespaces,
-				fakeOperatorClient,
-				fakeKubeClient,
-				nil, // osrClient not needed for this test
-				dynamicClient,
-				eventRecorder,
-			)
-			if err != nil {
-				t.Fatalf("Failed to create target config reconciler: %v", err)
-			}
+			setup := setupTestReconciler(t, ctx, tt.apiServer)
 
 			// Start informers after controllers have registered their event handlers
-			kubeInformersForNamespaces.Start(ctx.Done())
-			configInformers.Start(ctx.Done())
+			setup.kubeInformers.Start(ctx.Done())
+			setup.configInformers.Start(ctx.Done())
 
 			// Validate that operator spec doesn't have observed config before running config observer
-			if specBefore, err := fakeOperatorClient.OperatorClient.SecondarySchedulers(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperatorConfigName, metav1.GetOptions{}); err != nil {
+			if specBefore, err := setup.operatorClient.OperatorClient.SecondarySchedulers(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperatorConfigName, metav1.GetOptions{}); err != nil {
 				t.Fatalf("failed to get secondary scheduler before config observer sync: %v", err)
 			} else if len(specBefore.Spec.ObservedConfig.Raw) > 0 || specBefore.Spec.ObservedConfig.Object != nil {
 				t.Fatalf("operator spec should not have ObservedConfig before config observer sync, got Raw=%v Object=%v",
@@ -207,24 +237,24 @@ func TestManageDeployment_TLSConfiguration(t *testing.T) {
 
 			// Run config observer sync to update observed config in operator spec
 			// This will call apiserver.ObserveTLSSecurityProfile internally
-			if err := configObserver.Sync(ctx, &fakeSyncContext{recorder: eventRecorder}); err != nil {
+			if err := setup.configObserver.Sync(ctx, &fakeSyncContext{recorder: setup.eventRecorder}); err != nil {
 				t.Logf("WARNING: config observer sync returned error: %v", err)
 			}
 
 			// Validate that observed config was injected by config observer
-			if specAfter, err := fakeOperatorClient.OperatorClient.SecondarySchedulers(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperatorConfigName, metav1.GetOptions{}); err != nil {
+			if specAfter, err := setup.operatorClient.OperatorClient.SecondarySchedulers(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperatorConfigName, metav1.GetOptions{}); err != nil {
 				t.Fatalf("failed to get secondary scheduler after config observer sync: %v", err)
 			} else if len(specAfter.Spec.ObservedConfig.Raw) == 0 {
 				t.Fatalf("operator spec should have ObservedConfig.Raw populated after config observer sync")
 			}
 
 			// Run target config reconciler sync to trigger the full production code path
-			if err := targetConfigReconciler.sync(queueItem{kind: "secondaryscheduler"}); err != nil {
+			if err := setup.reconciler.sync(queueItem{kind: "secondaryscheduler"}); err != nil {
 				t.Fatalf("targetConfigReconciler.sync failed: %v", err)
 			}
 
 			// Read the generated Deployment from the fake kube client
-			actualDeployment, err := fakeKubeClient.AppsV1().Deployments(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperandName, metav1.GetOptions{})
+			actualDeployment, err := setup.kubeClient.AppsV1().Deployments(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperandName, metav1.GetOptions{})
 			if err != nil {
 				t.Fatalf("failed to get deployment: %v", err)
 			}
