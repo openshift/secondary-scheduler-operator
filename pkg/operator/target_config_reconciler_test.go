@@ -25,6 +25,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -123,6 +124,8 @@ func setupFakeClients(t *testing.T, apiServer *configv1.APIServer, secondarySche
 			kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Informer().GetIndexer().Add(v)
 		case *corev1.ServiceAccount:
 			kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ServiceAccounts().Informer().GetIndexer().Add(v)
+		case *appsv1.Deployment:
+			kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Apps().V1().Deployments().Informer().GetIndexer().Add(v)
 		}
 	}
 
@@ -336,6 +339,282 @@ func TestManageDeployment_TLSConfiguration(t *testing.T) {
 			}
 			if !foundMinTLSVersion {
 				t.Errorf("Expected to find --tls-min-version arg but didn't")
+			}
+		})
+	}
+}
+
+func TestManageDeployment(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(nil), nil)
+
+	setup.kubeInformers.Start(ctx.Done())
+	setup.configInformers.Start(ctx.Done())
+	setup.operatorConfigInformers.Start(ctx.Done())
+
+	secondaryScheduler, err := setup.operatorClient.OperatorClient.SecondarySchedulers(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperatorConfigName, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("Failed to get SecondaryScheduler: %v", err)
+	}
+
+	t.Run("Phase 1: no Deployment exists initially", func(t *testing.T) {
+		_, err := setup.kubeClient.AppsV1().Deployments(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperandName, metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
+			t.Fatalf("Expected Deployment to not exist (NotFound error), got: %v", err)
+		}
+	})
+
+	t.Run("Phase 2: manageDeployment creates Deployment", func(t *testing.T) {
+		deployment, modified, err := setup.reconciler.manageDeployment(secondaryScheduler, nil)
+		if err != nil {
+			t.Fatalf("manageDeployment failed: %v", err)
+		}
+
+		if !modified {
+			t.Error("Expected modified=true when creating Deployment, got false")
+		}
+
+		actualDeployment, err := setup.kubeClient.AppsV1().Deployments(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperandName, metav1.GetOptions{})
+		if err != nil {
+			t.Fatalf("Failed to get Deployment after creation: %v", err)
+		}
+
+		// Verify the returned Deployment matches what we got from the client
+		if deployment.Name != actualDeployment.Name {
+			t.Errorf("Returned Deployment name %q doesn't match actual %q", deployment.Name, actualDeployment.Name)
+		}
+		if deployment.ResourceVersion != actualDeployment.ResourceVersion {
+			t.Errorf("Returned Deployment ResourceVersion %q doesn't match actual %q", deployment.ResourceVersion, actualDeployment.ResourceVersion)
+		}
+
+		verifyName(t, actualDeployment)
+		verifyNamespace(t, actualDeployment)
+		verifyOwnerReference(t, actualDeployment)
+	})
+
+	t.Run("Phase 3: manageDeployment with no changes returns modified=false", func(t *testing.T) {
+		_, modified, err := setup.reconciler.manageDeployment(secondaryScheduler, nil)
+		if err != nil {
+			t.Fatalf("manageDeployment failed: %v", err)
+		}
+
+		if modified {
+			t.Error("Expected modified=false when no changes needed, got true")
+		}
+
+		actualDeployment, err := setup.kubeClient.AppsV1().Deployments(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperandName, metav1.GetOptions{})
+		if err != nil {
+			t.Fatalf("Failed to get Deployment: %v", err)
+		}
+		verifyOwnerReference(t, actualDeployment)
+	})
+
+	t.Run("Phase 4: manageDeployment restores changed field", func(t *testing.T) {
+		currentDeployment, err := setup.kubeClient.AppsV1().Deployments(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperandName, metav1.GetOptions{})
+		if err != nil {
+			t.Fatalf("Failed to get Deployment: %v", err)
+		}
+
+		origImage := currentDeployment.Spec.Template.Spec.Containers[0].Image
+		currentDeployment.Spec.Template.Spec.Containers[0].Image = "wrong-image"
+		currentDeployment.ObjectMeta.Generation = 1
+		if currentDeployment.Spec.Template.Spec.Containers[0].Image == origImage {
+			t.Fatalf("Container image has not changed")
+		}
+		_, err = setup.kubeClient.AppsV1().Deployments(operatorclient.OperatorNamespace).Update(ctx, currentDeployment, metav1.UpdateOptions{})
+		if err != nil {
+			t.Fatalf("Failed to update Deployment with wrong image: %v", err)
+		}
+
+		_, modified, err := setup.reconciler.manageDeployment(secondaryScheduler, nil)
+		if err != nil {
+			t.Fatalf("manageDeployment failed: %v", err)
+		}
+
+		if !modified {
+			t.Error("Expected modified=true when restoring changed field, got false")
+		}
+
+		restoredDeployment, err := setup.kubeClient.AppsV1().Deployments(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperandName, metav1.GetOptions{})
+		if err != nil {
+			t.Fatalf("Failed to get Deployment after restoration: %v", err)
+		}
+
+		if restoredDeployment.Spec.Template.Spec.Containers[0].Image != origImage {
+			t.Errorf("Expected image to be restored to %q, got %q", origImage, restoredDeployment.Spec.Template.Spec.Containers[0].Image)
+		}
+
+		verifyOwnerReference(t, restoredDeployment)
+	})
+}
+
+// verifyOwnerReference checks that the owner reference matches the expected value using cmp.Diff
+func TestManageDeployment_Replacements(t *testing.T) {
+	tests := []struct {
+		name                    string
+		setupSecondaryScheduler func(*secondaryschedulersv1.SecondaryScheduler)
+		verify                  func(*testing.T, *appsv1.Deployment)
+	}{
+		{
+			name: "Image replacement",
+			setupSecondaryScheduler: func(obj *secondaryschedulersv1.SecondaryScheduler) {
+				obj.Spec.SchedulerImage = "quay.io/openshift/custom-scheduler:v1.0"
+			},
+			verify: func(t *testing.T, deployment *appsv1.Deployment) {
+				if len(deployment.Spec.Template.Spec.Containers) == 0 {
+					t.Fatal("Expected at least one container")
+				}
+				actualImage := deployment.Spec.Template.Spec.Containers[0].Image
+				expectedImage := "quay.io/openshift/custom-scheduler:v1.0"
+				if actualImage != expectedImage {
+					t.Errorf("Expected container image %q, got %q", expectedImage, actualImage)
+				}
+			},
+		},
+		{
+			name: "ConfigMap replacement",
+			setupSecondaryScheduler: func(obj *secondaryschedulersv1.SecondaryScheduler) {
+				obj.Spec.SchedulerConfig = "custom-scheduler-config"
+			},
+			verify: func(t *testing.T, deployment *appsv1.Deployment) {
+				if len(deployment.Spec.Template.Spec.Volumes) == 0 {
+					t.Fatal("Expected at least one volume")
+				}
+				if deployment.Spec.Template.Spec.Volumes[0].ConfigMap == nil {
+					t.Fatal("Expected first volume to be a ConfigMap")
+				}
+				actualConfigMapName := deployment.Spec.Template.Spec.Volumes[0].ConfigMap.Name
+				expectedConfigMapName := "custom-scheduler-config"
+				if actualConfigMapName != expectedConfigMapName {
+					t.Errorf("Expected ConfigMap name %q, got %q", expectedConfigMapName, actualConfigMapName)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.TODO())
+			defer cancel()
+
+			// Setup fake clients with custom SecondaryScheduler
+			setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(tt.setupSecondaryScheduler), nil)
+
+			// Start informers
+			setup.kubeInformers.Start(ctx.Done())
+			setup.configInformers.Start(ctx.Done())
+			setup.operatorConfigInformers.Start(ctx.Done())
+
+			// Get the SecondaryScheduler object
+			secondaryScheduler, err := setup.operatorClient.OperatorClient.SecondarySchedulers(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperatorConfigName, metav1.GetOptions{})
+			if err != nil {
+				t.Fatalf("Failed to get SecondaryScheduler: %v", err)
+			}
+
+			// Call manageDeployment
+			_, _, err = setup.reconciler.manageDeployment(secondaryScheduler, nil)
+			if err != nil {
+				t.Fatalf("manageDeployment failed: %v", err)
+			}
+
+			// Verify the Deployment was created
+			actualDeployment, err := setup.kubeClient.AppsV1().Deployments(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperandName, metav1.GetOptions{})
+			if err != nil {
+				t.Fatalf("Failed to get Deployment: %v", err)
+			}
+
+			// Run test-specific verification
+			tt.verify(t, actualDeployment)
+		})
+	}
+}
+
+func TestManageDeployment_LogLevels(t *testing.T) {
+	tests := []struct {
+		name             string
+		logLevel         operatorv1.LogLevel
+		expectedLogLevel string
+	}{
+		{
+			name:             "Normal log level",
+			logLevel:         operatorv1.Normal,
+			expectedLogLevel: "-v=2",
+		},
+		{
+			name:             "Debug log level",
+			logLevel:         operatorv1.Debug,
+			expectedLogLevel: "-v=4",
+		},
+		{
+			name:             "Trace log level",
+			logLevel:         operatorv1.Trace,
+			expectedLogLevel: "-v=6",
+		},
+		{
+			name:             "TraceAll log level",
+			logLevel:         operatorv1.TraceAll,
+			expectedLogLevel: "-v=8",
+		},
+		{
+			name:             "Default log level (empty)",
+			logLevel:         "",
+			expectedLogLevel: "-v=2",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.TODO())
+			defer cancel()
+
+			// Setup fake clients with custom SecondaryScheduler
+			setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(func(obj *secondaryschedulersv1.SecondaryScheduler) {
+				obj.Spec.LogLevel = tt.logLevel
+			}), nil)
+
+			// Start informers
+			setup.kubeInformers.Start(ctx.Done())
+			setup.configInformers.Start(ctx.Done())
+			setup.operatorConfigInformers.Start(ctx.Done())
+
+			// Get the SecondaryScheduler object
+			secondaryScheduler, err := setup.operatorClient.OperatorClient.SecondarySchedulers(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperatorConfigName, metav1.GetOptions{})
+			if err != nil {
+				t.Fatalf("Failed to get SecondaryScheduler: %v", err)
+			}
+
+			// Call manageDeployment
+			_, _, err = setup.reconciler.manageDeployment(secondaryScheduler, nil)
+			if err != nil {
+				t.Fatalf("manageDeployment failed: %v", err)
+			}
+
+			// Verify the Deployment was created with the correct log level
+			actualDeployment, err := setup.kubeClient.AppsV1().Deployments(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperandName, metav1.GetOptions{})
+			if err != nil {
+				t.Fatalf("Failed to get Deployment: %v", err)
+			}
+
+			// Check that the log level arg is present and correct
+			if len(actualDeployment.Spec.Template.Spec.Containers) == 0 {
+				t.Fatal("Expected at least one container")
+			}
+
+			foundLogLevel := false
+			for _, arg := range actualDeployment.Spec.Template.Spec.Containers[0].Args {
+				if strings.HasPrefix(arg, "-v=") {
+					foundLogLevel = true
+					if arg != tt.expectedLogLevel {
+						t.Errorf("Expected log level arg %q, got %q", tt.expectedLogLevel, arg)
+					}
+					break
+				}
+			}
+
+			if !foundLogLevel {
+				t.Errorf("Expected to find log level arg %q in container args, but didn't find any -v= arg", tt.expectedLogLevel)
 			}
 		})
 	}
