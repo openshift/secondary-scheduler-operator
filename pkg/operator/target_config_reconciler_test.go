@@ -787,9 +787,25 @@ func TestManageClusterRoleBindings(t *testing.T) {
 					t.Fatalf("Failed to get ClusterRoleBinding: %v", err)
 				}
 
-				origNamespace := currentCRB.Subjects[0].Namespace
-				currentCRB.Subjects[0].Namespace = "wrong-namespace"
-				if currentCRB.Subjects[0].Namespace == origNamespace {
+				// Find the ServiceAccount subject to modify
+				if len(currentCRB.Subjects) == 0 {
+					t.Fatalf("Expected ClusterRoleBinding to have at least one subject, got 0")
+				}
+
+				saSubjectIdx := -1
+				for i, subject := range currentCRB.Subjects {
+					if subject.Kind == "ServiceAccount" && subject.Name == "secondary-scheduler" {
+						saSubjectIdx = i
+						break
+					}
+				}
+				if saSubjectIdx == -1 {
+					t.Fatalf("Expected to find ServiceAccount subject 'secondary-scheduler' in ClusterRoleBinding")
+				}
+
+				origNamespace := currentCRB.Subjects[saSubjectIdx].Namespace
+				currentCRB.Subjects[saSubjectIdx].Namespace = "wrong-namespace"
+				if currentCRB.Subjects[saSubjectIdx].Namespace == origNamespace {
 					t.Fatalf("Subject namespace has not changed")
 				}
 				_, err = setup.kubeClient.RbacV1().ClusterRoleBindings().Update(ctx, currentCRB, metav1.UpdateOptions{})
@@ -811,14 +827,155 @@ func TestManageClusterRoleBindings(t *testing.T) {
 					t.Fatalf("Failed to get ClusterRoleBinding after restoration: %v", err)
 				}
 
-				if restoredCRB.Subjects[0].Namespace != origNamespace {
-					t.Errorf("Expected namespace to be restored to %q, got %q", origNamespace, restoredCRB.Subjects[0].Namespace)
+				// Find the ServiceAccount subject again in the restored CRB
+				if len(restoredCRB.Subjects) == 0 {
+					t.Fatalf("Expected restored ClusterRoleBinding to have at least one subject, got 0")
+				}
+
+				restoredSASubjectIdx := -1
+				for i, subject := range restoredCRB.Subjects {
+					if subject.Kind == "ServiceAccount" && subject.Name == "secondary-scheduler" {
+						restoredSASubjectIdx = i
+						break
+					}
+				}
+				if restoredSASubjectIdx == -1 {
+					t.Fatalf("Expected to find ServiceAccount subject 'secondary-scheduler' in restored ClusterRoleBinding")
+				}
+
+				if restoredCRB.Subjects[restoredSASubjectIdx].Namespace != origNamespace {
+					t.Errorf("Expected namespace to be restored to %q, got %q", origNamespace, restoredCRB.Subjects[restoredSASubjectIdx].Namespace)
 				}
 
 				verifyOwnerReference(t, restoredCRB)
 			})
 		})
 	}
+}
+
+func TestSync(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.TODO())
+	defer cancel()
+
+	setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(nil), nil)
+
+	setup.kubeInformers.Start(ctx.Done())
+	setup.configInformers.Start(ctx.Done())
+	setup.operatorConfigInformers.Start(ctx.Done())
+
+	t.Run("Phase 1: no resources exist initially", func(t *testing.T) {
+		_, err := setup.kubeClient.CoreV1().ServiceAccounts(operatorclient.OperatorNamespace).Get(ctx, "secondary-scheduler", metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
+			t.Errorf("Expected ServiceAccount to not exist (NotFound error), got: %v", err)
+		}
+
+		_, err = setup.kubeClient.RbacV1().ClusterRoleBindings().Get(ctx, kubeSchedulerClusterRoleBindingName, metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
+			t.Errorf("Expected KubeScheduler ClusterRoleBinding to not exist (NotFound error), got: %v", err)
+		}
+
+		_, err = setup.kubeClient.RbacV1().ClusterRoleBindings().Get(ctx, volumeSchedulerClusterRoleBindingName, metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
+			t.Errorf("Expected VolumeScheduler ClusterRoleBinding to not exist (NotFound error), got: %v", err)
+		}
+
+		_, err = setup.kubeClient.AppsV1().Deployments(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperandName, metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
+			t.Errorf("Expected Deployment to not exist (NotFound error), got: %v", err)
+		}
+	})
+
+	t.Run("Phase 2: sync creates all resources", func(t *testing.T) {
+		err := setup.reconciler.sync(queueItem{kind: "secondaryscheduler", name: ""})
+		if err != nil {
+			t.Fatalf("sync failed: %v", err)
+		}
+
+		sa, err := setup.kubeClient.CoreV1().ServiceAccounts(operatorclient.OperatorNamespace).Get(ctx, "secondary-scheduler", metav1.GetOptions{})
+		if err != nil {
+			t.Errorf("Failed to get ServiceAccount after sync: %v", err)
+		} else {
+			verifyNamespace(t, sa)
+			verifyOwnerReference(t, sa)
+		}
+
+		kubeSchedulerCRB, err := setup.kubeClient.RbacV1().ClusterRoleBindings().Get(ctx, kubeSchedulerClusterRoleBindingName, metav1.GetOptions{})
+		if err != nil {
+			t.Errorf("Failed to get KubeScheduler ClusterRoleBinding after sync: %v", err)
+		} else {
+			verifyOwnerReference(t, kubeSchedulerCRB)
+		}
+
+		volumeSchedulerCRB, err := setup.kubeClient.RbacV1().ClusterRoleBindings().Get(ctx, volumeSchedulerClusterRoleBindingName, metav1.GetOptions{})
+		if err != nil {
+			t.Errorf("Failed to get VolumeScheduler ClusterRoleBinding after sync: %v", err)
+		} else {
+			verifyOwnerReference(t, volumeSchedulerCRB)
+		}
+
+		deployment, err := setup.kubeClient.AppsV1().Deployments(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperandName, metav1.GetOptions{})
+		if err != nil {
+			t.Errorf("Failed to get Deployment after sync: %v", err)
+		} else {
+			verifyName(t, deployment)
+			verifyNamespace(t, deployment)
+			verifyOwnerReference(t, deployment)
+
+			// Verify deployment has annotations for each resource
+			annotations := deployment.Spec.Template.Annotations
+			if annotations == nil {
+				t.Error("Expected Deployment to have spec.template.annotations, but it's nil")
+			} else {
+				// Verify all expected annotations are present
+				// Note: With fake clients, resource versions may be empty strings for some resources
+				// The important thing is that the annotation keys are present, indicating that
+				// sync() is properly tracking all resources
+				expectedAnnotations := []string{
+					"secondaryschedulers.operator.openshift.io/cluster",
+					"configmaps/test-config",
+					"serviceaccounts/secondary-scheduler",
+					"clusterrolebindings/secondary-scheduler-system-kube-scheduler",
+					"clusterrolebindings/secondary-scheduler-system-volume-scheduler",
+				}
+
+				for _, key := range expectedAnnotations {
+					if _, exists := annotations[key]; !exists {
+						t.Errorf("Expected annotation %q not found in deployment spec.template.annotations", key)
+					}
+				}
+
+				// Verify the configmap annotation has a non-empty value
+				if val := annotations["configmaps/test-config"]; val == "" {
+					t.Error("Expected annotation 'configmaps/test-config' to have non-empty resource version")
+				}
+			}
+		}
+
+		updatedScheduler, err := setup.operatorClient.OperatorClient.SecondarySchedulers(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperatorConfigName, metav1.GetOptions{})
+		if err != nil {
+			t.Fatalf("Failed to get SecondaryScheduler after sync: %v", err)
+		}
+
+		if len(updatedScheduler.Status.Generations) == 0 {
+			t.Error("Expected status.Generations to be updated, but it's empty")
+		} else {
+			generation := updatedScheduler.Status.Generations[0]
+			if generation.Group != "apps" || generation.Resource != "deployments" {
+				t.Errorf("Expected generation for apps/deployments, got %s/%s", generation.Group, generation.Resource)
+			}
+			if generation.Name != operatorclient.OperandName {
+				t.Errorf("Expected generation name %q, got %q", operatorclient.OperandName, generation.Name)
+			}
+			if generation.Namespace != operatorclient.OperatorNamespace {
+				t.Errorf("Expected generation namespace %q, got %q", operatorclient.OperatorNamespace, generation.Namespace)
+			}
+			// Verify LastGeneration is set to the deployment's generation
+			// This ensures sync() properly tracks the deployment generation in the status
+			if generation.LastGeneration != deployment.ObjectMeta.Generation {
+				t.Errorf("Expected LastGeneration to match deployment generation %d, got %d", deployment.ObjectMeta.Generation, generation.LastGeneration)
+			}
+		}
+	})
 }
 
 func verifyOwnerReference(t *testing.T, obj metav1.Object) {
