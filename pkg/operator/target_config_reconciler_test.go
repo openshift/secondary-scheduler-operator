@@ -27,6 +27,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -38,7 +39,9 @@ import (
 )
 
 const (
-	secondarySchedulerUID = "a1b2c3d4-e5f6-7a8b-9c0d-e1f2a3b4c5d6"
+	secondarySchedulerUID                 = "a1b2c3d4-e5f6-7a8b-9c0d-e1f2a3b4c5d6"
+	kubeSchedulerClusterRoleBindingName   = "secondary-scheduler-system-kube-scheduler"
+	volumeSchedulerClusterRoleBindingName = "secondary-scheduler-system-volume-scheduler"
 )
 
 func newOwnerReference() []metav1.OwnerReference {
@@ -685,6 +688,137 @@ func TestManageServiceAccount(t *testing.T) {
 		}
 		verifyOwnerReference(t, actualSA)
 	})
+}
+
+func TestManageClusterRoleBindings(t *testing.T) {
+	testCases := []struct {
+		name           string
+		crbName        string
+		manageFunc     func(*TargetConfigReconciler, *secondaryschedulersv1.SecondaryScheduler) (*rbacv1.ClusterRoleBinding, bool, error)
+		manageFuncName string
+	}{
+		{
+			name:    "KubeScheduler",
+			crbName: kubeSchedulerClusterRoleBindingName,
+			manageFunc: func(r *TargetConfigReconciler, ss *secondaryschedulersv1.SecondaryScheduler) (*rbacv1.ClusterRoleBinding, bool, error) {
+				return r.manageKubeSchedulerClusterRoleBinding(ss)
+			},
+			manageFuncName: "manageKubeSchedulerClusterRoleBinding",
+		},
+		{
+			name:    "VolumeScheduler",
+			crbName: volumeSchedulerClusterRoleBindingName,
+			manageFunc: func(r *TargetConfigReconciler, ss *secondaryschedulersv1.SecondaryScheduler) (*rbacv1.ClusterRoleBinding, bool, error) {
+				return r.manageVolumeSchedulerClusterRoleBinding(ss)
+			},
+			manageFuncName: "manageVolumeSchedulerClusterRoleBinding",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.TODO())
+			defer cancel()
+
+			setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(nil), nil)
+
+			setup.kubeInformers.Start(ctx.Done())
+			setup.configInformers.Start(ctx.Done())
+			setup.operatorConfigInformers.Start(ctx.Done())
+
+			secondaryScheduler, err := setup.operatorClient.OperatorClient.SecondarySchedulers(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperatorConfigName, metav1.GetOptions{})
+			if err != nil {
+				t.Fatalf("Failed to get SecondaryScheduler: %v", err)
+			}
+
+			t.Run("Phase 1: no ClusterRoleBinding exists initially", func(t *testing.T) {
+				_, err := setup.kubeClient.RbacV1().ClusterRoleBindings().Get(ctx, tc.crbName, metav1.GetOptions{})
+				if !apierrors.IsNotFound(err) {
+					t.Fatalf("Expected ClusterRoleBinding to not exist (NotFound error), got: %v", err)
+				}
+			})
+
+			t.Run("Phase 2: creates ClusterRoleBinding", func(t *testing.T) {
+				crb, modified, err := tc.manageFunc(setup.reconciler, secondaryScheduler)
+				if err != nil {
+					t.Fatalf("%s failed: %v", tc.manageFuncName, err)
+				}
+
+				if !modified {
+					t.Error("Expected modified=true when creating ClusterRoleBinding, got false")
+				}
+
+				actualCRB, err := setup.kubeClient.RbacV1().ClusterRoleBindings().Get(ctx, tc.crbName, metav1.GetOptions{})
+				if err != nil {
+					t.Fatalf("Failed to get ClusterRoleBinding after creation: %v", err)
+				}
+
+				// Verify the returned ClusterRoleBinding matches what we got from the client
+				if crb.Name != actualCRB.Name {
+					t.Errorf("Returned ClusterRoleBinding name %q doesn't match actual %q", crb.Name, actualCRB.Name)
+				}
+				if crb.ResourceVersion != actualCRB.ResourceVersion {
+					t.Errorf("Returned ClusterRoleBinding ResourceVersion %q doesn't match actual %q", crb.ResourceVersion, actualCRB.ResourceVersion)
+				}
+
+				verifyOwnerReference(t, actualCRB)
+			})
+
+			t.Run("Phase 3: no changes returns modified=false", func(t *testing.T) {
+				_, modified, err := tc.manageFunc(setup.reconciler, secondaryScheduler)
+				if err != nil {
+					t.Fatalf("%s failed: %v", tc.manageFuncName, err)
+				}
+
+				if modified {
+					t.Error("Expected modified=false when no changes needed, got true")
+				}
+
+				actualCRB, err := setup.kubeClient.RbacV1().ClusterRoleBindings().Get(ctx, tc.crbName, metav1.GetOptions{})
+				if err != nil {
+					t.Fatalf("Failed to get ClusterRoleBinding: %v", err)
+				}
+				verifyOwnerReference(t, actualCRB)
+			})
+
+			t.Run("Phase 4: restores changed field", func(t *testing.T) {
+				currentCRB, err := setup.kubeClient.RbacV1().ClusterRoleBindings().Get(ctx, tc.crbName, metav1.GetOptions{})
+				if err != nil {
+					t.Fatalf("Failed to get ClusterRoleBinding: %v", err)
+				}
+
+				origNamespace := currentCRB.Subjects[0].Namespace
+				currentCRB.Subjects[0].Namespace = "wrong-namespace"
+				if currentCRB.Subjects[0].Namespace == origNamespace {
+					t.Fatalf("Subject namespace has not changed")
+				}
+				_, err = setup.kubeClient.RbacV1().ClusterRoleBindings().Update(ctx, currentCRB, metav1.UpdateOptions{})
+				if err != nil {
+					t.Fatalf("Failed to update ClusterRoleBinding with wrong namespace: %v", err)
+				}
+
+				_, modified, err := tc.manageFunc(setup.reconciler, secondaryScheduler)
+				if err != nil {
+					t.Fatalf("%s failed: %v", tc.manageFuncName, err)
+				}
+
+				if !modified {
+					t.Error("Expected modified=true when restoring changed field, got false")
+				}
+
+				restoredCRB, err := setup.kubeClient.RbacV1().ClusterRoleBindings().Get(ctx, tc.crbName, metav1.GetOptions{})
+				if err != nil {
+					t.Fatalf("Failed to get ClusterRoleBinding after restoration: %v", err)
+				}
+
+				if restoredCRB.Subjects[0].Namespace != origNamespace {
+					t.Errorf("Expected namespace to be restored to %q, got %q", origNamespace, restoredCRB.Subjects[0].Namespace)
+				}
+
+				verifyOwnerReference(t, restoredCRB)
+			})
+		})
+	}
 }
 
 func verifyOwnerReference(t *testing.T, obj metav1.Object) {
