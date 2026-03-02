@@ -27,7 +27,6 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -667,11 +666,11 @@ func TestManageServiceAccount(t *testing.T) {
 		}
 
 		// Verify the returned ServiceAccount matches what we got from the client
-		if sa.Name != actualSA.Name {
-			t.Errorf("Returned ServiceAccount name %q doesn't match actual %q", sa.Name, actualSA.Name)
+		if sa.GetName() != actualSA.Name {
+			t.Errorf("Returned ServiceAccount name %q doesn't match actual %q", sa.GetName(), actualSA.Name)
 		}
-		if sa.ResourceVersion != actualSA.ResourceVersion {
-			t.Errorf("Returned ServiceAccount ResourceVersion %q doesn't match actual %q", sa.ResourceVersion, actualSA.ResourceVersion)
+		if sa.GetResourceVersion() != actualSA.ResourceVersion {
+			t.Errorf("Returned ServiceAccount ResourceVersion %q doesn't match actual %q", sa.GetResourceVersion(), actualSA.ResourceVersion)
 		}
 
 		verifyNamespace(t, actualSA)
@@ -700,13 +699,13 @@ func TestManageClusterRoleBindings(t *testing.T) {
 	testCases := []struct {
 		name           string
 		crbName        string
-		manageFunc     func(*TargetConfigReconciler, *secondaryschedulersv1.SecondaryScheduler) (*rbacv1.ClusterRoleBinding, bool, error)
+		manageFunc     func(*TargetConfigReconciler, *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error)
 		manageFuncName string
 	}{
 		{
 			name:    "KubeScheduler",
 			crbName: kubeSchedulerClusterRoleBindingName,
-			manageFunc: func(r *TargetConfigReconciler, ss *secondaryschedulersv1.SecondaryScheduler) (*rbacv1.ClusterRoleBinding, bool, error) {
+			manageFunc: func(r *TargetConfigReconciler, ss *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
 				return r.manageKubeSchedulerClusterRoleBinding(ss)
 			},
 			manageFuncName: "manageKubeSchedulerClusterRoleBinding",
@@ -714,7 +713,7 @@ func TestManageClusterRoleBindings(t *testing.T) {
 		{
 			name:    "VolumeScheduler",
 			crbName: volumeSchedulerClusterRoleBindingName,
-			manageFunc: func(r *TargetConfigReconciler, ss *secondaryschedulersv1.SecondaryScheduler) (*rbacv1.ClusterRoleBinding, bool, error) {
+			manageFunc: func(r *TargetConfigReconciler, ss *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
 				return r.manageVolumeSchedulerClusterRoleBinding(ss)
 			},
 			manageFuncName: "manageVolumeSchedulerClusterRoleBinding",
@@ -760,11 +759,11 @@ func TestManageClusterRoleBindings(t *testing.T) {
 				}
 
 				// Verify the returned ClusterRoleBinding matches what we got from the client
-				if crb.Name != actualCRB.Name {
-					t.Errorf("Returned ClusterRoleBinding name %q doesn't match actual %q", crb.Name, actualCRB.Name)
+				if crb.GetName() != actualCRB.Name {
+					t.Errorf("Returned ClusterRoleBinding name %q doesn't match actual %q", crb.GetName(), actualCRB.Name)
 				}
-				if crb.ResourceVersion != actualCRB.ResourceVersion {
-					t.Errorf("Returned ClusterRoleBinding ResourceVersion %q doesn't match actual %q", crb.ResourceVersion, actualCRB.ResourceVersion)
+				if crb.GetResourceVersion() != actualCRB.ResourceVersion {
+					t.Errorf("Returned ClusterRoleBinding ResourceVersion %q doesn't match actual %q", crb.GetResourceVersion(), actualCRB.ResourceVersion)
 				}
 
 				verifyOwnerReference(t, actualCRB)
