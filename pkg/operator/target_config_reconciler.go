@@ -114,6 +114,13 @@ func NewTargetConfigReconciler(
 	return c, nil
 }
 
+func getResourceVersion(obj metav1.Object) string {
+	if obj == nil {
+		return "0"
+	}
+	return obj.GetResourceVersion()
+}
+
 func (c TargetConfigReconciler) sync(item queueItem) error {
 	secondaryScheduler, err := c.operatorClient.SecondarySchedulers(operatorclient.OperatorNamespace).Get(c.ctx, operatorclient.OperatorConfigName, metav1.GetOptions{})
 	if err != nil {
@@ -142,31 +149,19 @@ func (c TargetConfigReconciler) sync(item queueItem) error {
 	if sa, _, err := c.manageServiceAccount(secondaryScheduler); err != nil {
 		return err
 	} else {
-		resourceVersion := "0"
-		if sa != nil { // SyncConfigMap can return nil
-			resourceVersion = sa.ObjectMeta.ResourceVersion
-		}
-		specAnnotations["serviceaccounts/secondary-scheduler"] = resourceVersion
+		specAnnotations["serviceaccounts/secondary-scheduler"] = getResourceVersion(sa)
 	}
 
 	if clusterRoleBinding, _, err := c.manageKubeSchedulerClusterRoleBinding(secondaryScheduler); err != nil {
 		return err
 	} else {
-		resourceVersion := "0"
-		if clusterRoleBinding != nil {
-			resourceVersion = clusterRoleBinding.ObjectMeta.ResourceVersion
-		}
-		specAnnotations["clusterrolebindings/secondary-scheduler-system-kube-scheduler"] = resourceVersion
+		specAnnotations["clusterrolebindings/secondary-scheduler-system-kube-scheduler"] = getResourceVersion(clusterRoleBinding)
 	}
 
 	if clusterRoleBinding, _, err := c.manageVolumeSchedulerClusterRoleBinding(secondaryScheduler); err != nil {
 		return err
 	} else {
-		resourceVersion := "0"
-		if clusterRoleBinding != nil {
-			resourceVersion = clusterRoleBinding.ObjectMeta.ResourceVersion
-		}
-		specAnnotations["clusterrolebindings/secondary-scheduler-system-volume-scheduler"] = resourceVersion
+		specAnnotations["clusterrolebindings/secondary-scheduler-system-volume-scheduler"] = getResourceVersion(clusterRoleBinding)
 	}
 
 	deployment, _, err := c.manageDeployment(secondaryScheduler, specAnnotations)

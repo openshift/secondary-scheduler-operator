@@ -35,6 +35,8 @@ import (
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes"
 	kubefake "k8s.io/client-go/kubernetes/fake"
+	kubetesting "k8s.io/client-go/testing"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 )
 
@@ -42,6 +44,7 @@ const (
 	secondarySchedulerUID                 = "a1b2c3d4-e5f6-7a8b-9c0d-e1f2a3b4c5d6"
 	kubeSchedulerClusterRoleBindingName   = "secondary-scheduler-system-kube-scheduler"
 	volumeSchedulerClusterRoleBindingName = "secondary-scheduler-system-volume-scheduler"
+	schedulerConfigMapName                = "test-config"
 )
 
 func newOwnerReference() []metav1.OwnerReference {
@@ -53,6 +56,23 @@ func newOwnerReference() []metav1.OwnerReference {
 			UID:        secondarySchedulerUID,
 		},
 	}
+}
+
+func newSchedulerConfigMap(apply func(cm *corev1.ConfigMap)) *corev1.ConfigMap {
+	cm := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            schedulerConfigMapName,
+			Namespace:       operatorclient.OperatorNamespace,
+			ResourceVersion: "1",
+		},
+		Data: map[string]string{
+			"config.yaml": "{}",
+		},
+	}
+	if apply != nil {
+		apply(cm)
+	}
+	return cm
 }
 
 func newSecondaryScheduler(apply func(ss *secondaryschedulersv1.SecondaryScheduler)) *secondaryschedulersv1.SecondaryScheduler {
@@ -67,7 +87,7 @@ func newSecondaryScheduler(apply func(ss *secondaryschedulersv1.SecondarySchedul
 				ManagementState: operatorv1.Managed,
 			},
 			SchedulerImage:  "test-image",
-			SchedulerConfig: "test-config",
+			SchedulerConfig: schedulerConfigMapName,
 		},
 		Status: secondaryschedulersv1.SecondarySchedulerStatus{
 			OperatorStatus: operatorv1.OperatorStatus{
@@ -98,22 +118,8 @@ func setupFakeClients(t *testing.T, apiServer *configv1.APIServer, secondarySche
 	dynamic.Interface,
 ) {
 
-	// Create required ConfigMap
-	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            secondaryScheduler.Spec.SchedulerConfig,
-			Namespace:       operatorclient.OperatorNamespace,
-			ResourceVersion: "1",
-		},
-		Data: map[string]string{
-			"config.yaml": "{}",
-		},
-	}
-
-	allCoreObjects := append([]runtime.Object{configMap}, coreObjects...)
-
 	// Setup kube client with required resources
-	fakeKubeClient := kubefake.NewSimpleClientset(allCoreObjects...)
+	fakeKubeClient := kubefake.NewSimpleClientset(coreObjects...)
 	kubeInformersForNamespaces := v1helpers.NewKubeInformersForNamespaces(
 		fakeKubeClient,
 		"",
@@ -121,7 +127,7 @@ func setupFakeClients(t *testing.T, apiServer *configv1.APIServer, secondarySche
 	)
 
 	// Add all core objects to informer cache
-	for _, obj := range allCoreObjects {
+	for _, obj := range coreObjects {
 		switch v := obj.(type) {
 		case *corev1.ConfigMap:
 			kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Informer().GetIndexer().Add(v)
@@ -279,7 +285,7 @@ func TestManageDeployment_TLSConfiguration(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.TODO())
 			defer cancel()
 
-			setup := setupTestReconciler(t, ctx, tt.apiServer, newSecondaryScheduler(nil), nil)
+			setup := setupTestReconciler(t, ctx, tt.apiServer, newSecondaryScheduler(nil), []runtime.Object{newSchedulerConfigMap(nil)})
 
 			// Start informers after controllers have registered their event handlers
 			setup.kubeInformers.Start(ctx.Done())
@@ -351,7 +357,7 @@ func TestManageDeployment(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(nil), nil)
+	setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(nil), []runtime.Object{newSchedulerConfigMap(nil)})
 
 	setup.kubeInformers.Start(ctx.Done())
 	setup.configInformers.Start(ctx.Done())
@@ -503,7 +509,7 @@ func TestManageDeployment_Replacements(t *testing.T) {
 			defer cancel()
 
 			// Setup fake clients with custom SecondaryScheduler
-			setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(tt.setupSecondaryScheduler), nil)
+			setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(tt.setupSecondaryScheduler), []runtime.Object{newSchedulerConfigMap(nil)})
 
 			// Start informers
 			setup.kubeInformers.Start(ctx.Done())
@@ -575,7 +581,7 @@ func TestManageDeployment_LogLevels(t *testing.T) {
 			// Setup fake clients with custom SecondaryScheduler
 			setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(func(obj *secondaryschedulersv1.SecondaryScheduler) {
 				obj.Spec.LogLevel = tt.logLevel
-			}), nil)
+			}), []runtime.Object{newSchedulerConfigMap(nil)})
 
 			// Start informers
 			setup.kubeInformers.Start(ctx.Done())
@@ -627,7 +633,7 @@ func TestManageServiceAccount(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(nil), nil)
+	setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(nil), []runtime.Object{newSchedulerConfigMap(nil)})
 
 	setup.kubeInformers.Start(ctx.Done())
 	setup.configInformers.Start(ctx.Done())
@@ -720,7 +726,7 @@ func TestManageClusterRoleBindings(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.TODO())
 			defer cancel()
 
-			setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(nil), nil)
+			setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(nil), []runtime.Object{newSchedulerConfigMap(nil)})
 
 			setup.kubeInformers.Start(ctx.Done())
 			setup.configInformers.Start(ctx.Done())
@@ -857,7 +863,7 @@ func TestSync(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(nil), nil)
+	setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(nil), []runtime.Object{newSchedulerConfigMap(nil)})
 
 	setup.kubeInformers.Start(ctx.Done())
 	setup.configInformers.Start(ctx.Done())
@@ -976,6 +982,138 @@ func TestSync(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestGetResourceVersion(t *testing.T) {
+	testCases := []struct {
+		name            string
+		obj             metav1.Object
+		expectedVersion string
+	}{
+		{
+			name:            "nil object returns 0",
+			obj:             nil,
+			expectedVersion: "0",
+		},
+		{
+			name: "object with empty ResourceVersion returns empty string",
+			obj: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "test-sa",
+					ResourceVersion: "",
+				},
+			},
+			expectedVersion: "",
+		},
+		{
+			name: "object with valid ResourceVersion returns the version",
+			obj: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "test-sa",
+					ResourceVersion: "12345",
+				},
+			},
+			expectedVersion: "12345",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := getResourceVersion(tc.obj)
+			if result != tc.expectedVersion {
+				t.Errorf("Expected %q, got %q", tc.expectedVersion, result)
+			}
+		})
+	}
+}
+
+func TestSyncResourceVersionAnnotations(t *testing.T) {
+	testCases := []struct {
+		name            string
+		resourceVersion string
+	}{
+		{
+			name:            "ResourceVersionsNotSet",
+			resourceVersion: "",
+		},
+		{
+			name:            "ResourceVersionsSet",
+			resourceVersion: "1001",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.TODO(), 30*time.Second)
+			defer cancel()
+
+			// Create ConfigMap with specified ResourceVersion
+			cm := newSchedulerConfigMap(func(cm *corev1.ConfigMap) {
+				cm.ResourceVersion = tc.resourceVersion
+			})
+			setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(nil), []runtime.Object{cm})
+
+			// Add reactors to set ResourceVersions when resources are created
+			if tc.resourceVersion != "" {
+				fakeClient := setup.kubeClient.(*kubefake.Clientset)
+				for _, resource := range []string{"serviceaccounts", "clusterrolebindings"} {
+					fakeClient.PrependReactor("create", resource, func(action kubetesting.Action) (handled bool, ret runtime.Object, err error) {
+						action.(kubetesting.CreateAction).GetObject().(metav1.Object).SetResourceVersion(tc.resourceVersion)
+						return false, nil, nil
+					})
+				}
+			}
+
+			setup.kubeInformers.Start(ctx.Done())
+			setup.configInformers.Start(ctx.Done())
+			setup.operatorConfigInformers.Start(ctx.Done())
+
+			// Wait for informers to sync
+			if !cache.WaitForCacheSync(ctx.Done(), setup.kubeInformers.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Informer().HasSynced) {
+				t.Fatal("failed to sync informer caches")
+			}
+
+			item := queueItem{
+				kind: "secondaryscheduler",
+				name: "",
+			}
+
+			if err := setup.reconciler.sync(item); err != nil {
+				t.Fatalf("sync failed: %v", err)
+			}
+
+			// Get the deployment and verify resource version annotations
+			deployment, err := setup.kubeClient.AppsV1().Deployments(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperandName, metav1.GetOptions{})
+			if err != nil {
+				t.Fatalf("Failed to get deployment: %v", err)
+			}
+
+			annotations := deployment.Spec.Template.Annotations
+			if annotations == nil {
+				t.Fatal("Expected deployment to have spec.template.annotations")
+			}
+
+			// Verify all expected annotations have the expected ResourceVersion
+			expectedAnnotations := map[string]string{
+				"configmaps/" + schedulerConfigMapName:                         tc.resourceVersion,
+				"serviceaccounts/secondary-scheduler":                          tc.resourceVersion,
+				"clusterrolebindings/" + kubeSchedulerClusterRoleBindingName:   tc.resourceVersion,
+				"clusterrolebindings/" + volumeSchedulerClusterRoleBindingName: tc.resourceVersion,
+			}
+
+			for key, expectedValue := range expectedAnnotations {
+				value, exists := annotations[key]
+				if !exists {
+					t.Errorf("Expected annotation %q to exist", key)
+					continue
+				}
+
+				if value != expectedValue {
+					t.Errorf("Expected annotation %q to be %q, got %q", key, expectedValue, value)
+				}
+			}
+		})
+	}
 }
 
 func verifyOwnerReference(t *testing.T, obj metav1.Object) {
