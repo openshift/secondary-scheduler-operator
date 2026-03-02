@@ -149,14 +149,24 @@ func (c TargetConfigReconciler) sync(item queueItem) error {
 		specAnnotations["serviceaccounts/secondary-scheduler"] = resourceVersion
 	}
 
-	if clusterRoleBindings, _, err := c.manageClusterRoleBindings(secondaryScheduler); err != nil {
+	if clusterRoleBinding, _, err := c.manageKubeSchedulerClusterRoleBinding(secondaryScheduler); err != nil {
 		return err
 	} else {
 		resourceVersion := "0"
-		if clusterRoleBindings != nil { // SyncConfigMap can return nil
-			resourceVersion = clusterRoleBindings.ObjectMeta.ResourceVersion
+		if clusterRoleBinding != nil {
+			resourceVersion = clusterRoleBinding.ObjectMeta.ResourceVersion
 		}
-		specAnnotations["clusterrolebindings/secondary-scheduler"] = resourceVersion
+		specAnnotations["clusterrolebindings/secondary-scheduler-system-kube-scheduler"] = resourceVersion
+	}
+
+	if clusterRoleBinding, _, err := c.manageVolumeSchedulerClusterRoleBinding(secondaryScheduler); err != nil {
+		return err
+	} else {
+		resourceVersion := "0"
+		if clusterRoleBinding != nil {
+			resourceVersion = clusterRoleBinding.ObjectMeta.ResourceVersion
+		}
+		specAnnotations["clusterrolebindings/secondary-scheduler-system-volume-scheduler"] = resourceVersion
 	}
 
 	deployment, _, err := c.manageDeployment(secondaryScheduler, specAnnotations)
@@ -197,7 +207,7 @@ func (c *TargetConfigReconciler) manageServiceAccount(secondaryScheduler *second
 	return resourceapply.ApplyServiceAccount(c.ctx, c.kubeClient.CoreV1(), c.eventRecorder, required)
 }
 
-func (c *TargetConfigReconciler) manageClusterRoleBindings(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (*rbacv1.ClusterRoleBinding, bool, error) {
+func (c *TargetConfigReconciler) manageKubeSchedulerClusterRoleBinding(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (*rbacv1.ClusterRoleBinding, bool, error) {
 	required := resourceread.ReadClusterRoleBindingV1OrDie(bindata.MustAsset("assets/secondary-scheduler/clusterrolebinding-system-kube-scheduler.yaml"))
 	ownerReference := metav1.OwnerReference{
 		APIVersion: "operator.openshift.io/v1",
@@ -210,13 +220,12 @@ func (c *TargetConfigReconciler) manageClusterRoleBindings(secondaryScheduler *s
 	}
 	controller.EnsureOwnerRef(required, ownerReference)
 
-	crb, modified, err := resourceapply.ApplyClusterRoleBinding(c.ctx, c.kubeClient.RbacV1(), c.eventRecorder, required)
-	if err != nil {
-		return crb, modified, err
-	}
+	return resourceapply.ApplyClusterRoleBinding(c.ctx, c.kubeClient.RbacV1(), c.eventRecorder, required)
+}
 
-	required = resourceread.ReadClusterRoleBindingV1OrDie(bindata.MustAsset("assets/secondary-scheduler/clusterrolebinding-system-volume-scheduler.yaml"))
-	ownerReference = metav1.OwnerReference{
+func (c *TargetConfigReconciler) manageVolumeSchedulerClusterRoleBinding(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (*rbacv1.ClusterRoleBinding, bool, error) {
+	required := resourceread.ReadClusterRoleBindingV1OrDie(bindata.MustAsset("assets/secondary-scheduler/clusterrolebinding-system-volume-scheduler.yaml"))
+	ownerReference := metav1.OwnerReference{
 		APIVersion: "operator.openshift.io/v1",
 		Kind:       "SecondaryScheduler",
 		Name:       secondaryScheduler.Name,
