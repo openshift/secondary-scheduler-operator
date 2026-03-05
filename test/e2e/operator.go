@@ -15,7 +15,7 @@ import (
 	k8sclient "k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	clocktesting "k8s.io/utils/clock/testing"
-  utilpointer "k8s.io/utils/pointer"
+	utilpointer "k8s.io/utils/pointer"
 
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
@@ -30,7 +30,8 @@ import (
 )
 
 // setupOperator sets up the operator and waits for it to be ready.
-func setupOperator() (context.Context, context.CancelFunc, *k8sclient.Clientset, error) {
+// This function works with both standard Go testing and Ginkgo.
+func setupOperator(t testing.TB) (context.Context, context.CancelFunc, *k8sclient.Clientset, error) {
 	ctx, cancelFnc := context.WithCancel(context.Background())
 
 	// Verify required environment variables
@@ -273,4 +274,22 @@ func testScheduling(t testing.TB, ctx context.Context, kubeClient *k8sclient.Cli
 	}, time.Minute, 1*time.Second).Should(o.BeTrue(), "pod not running after timeout")
 
 	return testNamespace
+}
+
+// cleanupTestNamespace deletes the test namespace.
+func cleanupTestNamespace(t testing.TB, ctx context.Context, kubeClient *k8sclient.Clientset, testNamespace string) {
+	if testNamespace == "" {
+		return
+	}
+	klog.Infof("Cleaning up test namespace: %s", testNamespace)
+	if err := kubeClient.CoreV1().Namespaces().Delete(ctx, testNamespace, metav1.DeleteOptions{}); err != nil {
+		t.Fatalf("Failed to delete namespace %s: %v", testNamespace, err)
+	}
+	o.Eventually(func() bool {
+		_, err := kubeClient.CoreV1().Namespaces().Get(ctx, testNamespace, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			return true
+		}
+		return false
+	}, time.Minute, 1*time.Second).Should(o.BeTrue(), "namespace not deleted after timeout")
 }
