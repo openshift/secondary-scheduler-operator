@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"testing"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -14,6 +15,7 @@ import (
 	k8sclient "k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	clocktesting "k8s.io/utils/clock/testing"
+  utilpointer "k8s.io/utils/pointer"
 
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
@@ -204,4 +206,71 @@ func setupOperator() (context.Context, context.CancelFunc, *k8sclient.Clientset,
 
 	klog.Infof("All operator components are running and ready")
 	return ctx, cancelFnc, kubeClient, nil
+}
+
+func testScheduling(t testing.TB, ctx context.Context, kubeClient *k8sclient.Clientset) string {
+	testNamespace := "e2e-test-secondaryschedulerscheduling"
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testNamespace,
+		},
+	}
+
+	klog.Infof("Creating test namespace")
+	_, err := kubeClient.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create test namespace: %v", err)
+	}
+
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testNamespace,
+			Name:      "test-secondary-scheduler-sheduling-pod",
+			Labels:    map[string]string{"app": "test-secondary-scheduler-sheduling"},
+		},
+		Spec: corev1.PodSpec{
+			SecurityContext: &corev1.PodSecurityContext{
+				RunAsNonRoot: utilpointer.BoolPtr(true),
+				SeccompProfile: &corev1.SeccompProfile{
+					Type: corev1.SeccompProfileTypeRuntimeDefault,
+				},
+			},
+			SchedulerName: "secondary-scheduler",
+			Containers: []corev1.Container{{
+				SecurityContext: &corev1.SecurityContext{
+					AllowPrivilegeEscalation: utilpointer.BoolPtr(false),
+					Capabilities: &corev1.Capabilities{
+						Drop: []corev1.Capability{
+							"ALL",
+						},
+					},
+				},
+				Name:            "pause",
+				ImagePullPolicy: "Always",
+				Image:           "kubernetes/pause",
+				Ports:           []corev1.ContainerPort{{ContainerPort: 80}},
+			}},
+		},
+	}
+	if _, err := kubeClient.CoreV1().Pods(pod.Namespace).Create(ctx, pod, metav1.CreateOptions{}); err != nil {
+		t.Fatalf("Unable to create a pod: %v", err)
+	}
+
+	o.Eventually(func() bool {
+		klog.Infof("Listing pods...")
+		pod, err := kubeClient.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
+		if err != nil {
+			klog.Errorf("Unable to get pod: %v", err)
+			return false
+		}
+		if pod.Spec.NodeName == "" {
+			klog.Infof("Pod not yet assigned to a node")
+			return false
+		}
+		klog.Infof("Pod successfully assigned to a node: %v", pod.Spec.NodeName)
+
+		return true
+	}, time.Minute, 1*time.Second).Should(o.BeTrue(), "pod not running after timeout")
+
+	return testNamespace
 }
