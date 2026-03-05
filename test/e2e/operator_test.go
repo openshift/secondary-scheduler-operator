@@ -29,19 +29,20 @@ import (
 )
 
 func TestMain(m *testing.M) {
+	// Verify required environment variables
 	if os.Getenv("KUBECONFIG") == "" {
 		klog.Errorf("KUBECONFIG environment variable not set")
 		os.Exit(1)
 	}
-
-	if os.Getenv("IMAGE_FORMAT") == "" {
-		klog.Errorf("IMAGE_FORMAT environment variable not set")
-		os.Exit(1)
-	}
-
-	if os.Getenv("NAMESPACE") == "" {
-		klog.Errorf("NAMESPACE environment variable not set")
-		os.Exit(1)
+	if os.Getenv("IMAGE") == "" {
+		if os.Getenv("IMAGE_FORMAT") == "" {
+			klog.Errorf("IMAGE_FORMAT environment variable not set")
+			os.Exit(1)
+		}
+		if os.Getenv("NAMESPACE") == "" {
+			klog.Errorf("NAMESPACE environment variable not set")
+			os.Exit(1)
+		}
 	}
 
 	kubeClient := GetKubeClient()
@@ -114,8 +115,11 @@ func TestMain(m *testing.M) {
 
 				// E.g. IMAGE_FORMAT=registry.build03.ci.openshift.org/ci-op-52fj47p4/stable:${component}
 				registry := strings.Split(os.Getenv("IMAGE_FORMAT"), "/")[0]
-
-				required.Spec.Template.Spec.Containers[0].Image = registry + "/" + os.Getenv("NAMESPACE") + "/pipeline:secondary-scheduler-operator"
+				image := registry + "/" + os.Getenv("NAMESPACE") + "/pipeline:secondary-scheduler-operator"
+				if os.Getenv("IMAGE") != "" {
+					image = os.Getenv("IMAGE")
+				}
+				required.Spec.Template.Spec.Containers[0].Image = image
 				_, _, err := resourceapply.ApplyDeployment(
 					ctx,
 					kubeClient.AppsV1(),
