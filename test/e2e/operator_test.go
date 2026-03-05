@@ -142,6 +142,20 @@ func TestMain(m *testing.M) {
 				requiredSS := requiredObj.(*ssv1.SecondaryScheduler)
 
 				_, err = ssClient.SecondaryschedulersV1().SecondarySchedulers(requiredSS.Namespace).Create(ctx, requiredSS, metav1.CreateOptions{})
+				if err == nil {
+					return nil
+				}
+				if !apierrors.IsAlreadyExists(err) {
+					return err
+				}
+				// Get the existing object to obtain its resourceVersion
+				existingSS, getErr := ssClient.SecondaryschedulersV1().SecondarySchedulers(requiredSS.Namespace).Get(ctx, requiredSS.Name, metav1.GetOptions{})
+				if getErr != nil {
+					return getErr
+				}
+				// Update the spec with the required values
+				existingSS.Spec = requiredSS.Spec
+				_, err = ssClient.SecondaryschedulersV1().SecondarySchedulers(requiredSS.Namespace).Update(ctx, existingSS, metav1.UpdateOptions{})
 				return err
 			},
 		},
