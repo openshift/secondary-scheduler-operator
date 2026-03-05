@@ -8,13 +8,10 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	apiextclientv1 "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	k8sclient "k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/clock"
 
@@ -23,7 +20,6 @@ import (
 	"github.com/openshift/library-go/pkg/operator/resource/resourceread"
 
 	ssv1 "github.com/openshift/secondary-scheduler-operator/pkg/apis/secondaryscheduler/v1"
-	ssclient "github.com/openshift/secondary-scheduler-operator/pkg/generated/clientset/versioned"
 	ssscheme "github.com/openshift/secondary-scheduler-operator/pkg/generated/clientset/versioned/scheme"
 	"github.com/openshift/secondary-scheduler-operator/pkg/operator/operatorclient"
 	"github.com/openshift/secondary-scheduler-operator/test/e2e/bindata"
@@ -46,9 +42,9 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	kubeClient := getKubeClientOrDie()
-	apiExtClient := getApiExtensionKubeClient()
-	ssClient := getSecondarySchedulerClient()
+	kubeClient := GetKubeClient()
+	apiExtClient := GetApiExtensionClient()
+	ssClient := GetSecondarySchedulerClient()
 
 	eventRecorder := events.NewKubeRecorder(kubeClient.CoreV1().Events("default"), "test-e2e", &corev1.ObjectReference{}, clock.RealClock{})
 
@@ -197,7 +193,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestScheduling(t *testing.T) {
-	kubeClient := getKubeClientOrDie()
+	kubeClient := GetKubeClient()
 
 	ctx := context.TODO()
 
@@ -263,49 +259,4 @@ func TestScheduling(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("Unable to wait for a scheduled pod: %v", err)
 	}
-}
-
-func getKubeClientOrDie() *k8sclient.Clientset {
-	kubeconfig := os.Getenv("KUBECONFIG")
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		klog.Errorf("Unable to build config: %v", err)
-		os.Exit(1)
-	}
-	client, err := k8sclient.NewForConfig(config)
-	if err != nil {
-		klog.Errorf("Unable to build client: %v", err)
-		os.Exit(1)
-	}
-	return client
-}
-
-func getApiExtensionKubeClient() *apiextclientv1.Clientset {
-	kubeconfig := os.Getenv("KUBECONFIG")
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		klog.Errorf("Unable to build config: %v", err)
-		os.Exit(1)
-	}
-	client, err := apiextclientv1.NewForConfig(config)
-	if err != nil {
-		klog.Errorf("Unable to build client: %v", err)
-		os.Exit(1)
-	}
-	return client
-}
-
-func getSecondarySchedulerClient() *ssclient.Clientset {
-	kubeconfig := os.Getenv("KUBECONFIG")
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		klog.Errorf("Unable to build config: %v", err)
-		os.Exit(1)
-	}
-	client, err := ssclient.NewForConfig(config)
-	if err != nil {
-		klog.Errorf("Unable to build client: %v", err)
-		os.Exit(1)
-	}
-	return client
 }
