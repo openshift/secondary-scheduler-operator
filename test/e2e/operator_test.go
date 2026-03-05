@@ -24,6 +24,8 @@ import (
 	"github.com/openshift/secondary-scheduler-operator/pkg/operator/operatorclient"
 	"github.com/openshift/secondary-scheduler-operator/test/e2e/bindata"
 	utilpointer "k8s.io/utils/pointer"
+
+	o "github.com/onsi/gomega"
 )
 
 func TestMain(m *testing.M) {
@@ -161,48 +163,40 @@ func TestMain(m *testing.M) {
 		},
 	}
 
-	// create required resources, e.g. namespace, crd, roles
-	if err := wait.PollImmediate(1*time.Second, 10*time.Second, func() (bool, error) {
+	// Apply all assets
+	klog.Infof("Creating operator resources (namespace, CRD, RBAC, deployment)")
+	o.Eventually(func() bool {
+		allSucceeded := true
 		for _, asset := range assets {
 			klog.Infof("Creating %v", asset.path)
 			if err := asset.readerAndApply(bindata.MustAsset(asset.path)); err != nil {
 				klog.Errorf("Unable to create %v: %v", asset.path, err)
-				return false, nil
+				allSucceeded = false
 			}
 		}
+		return allSucceeded
+	}, 10*time.Second, 1*time.Second).Should(o.BeTrue(), "failed to create assets")
 
-		return true, nil
-	}); err != nil {
-		klog.Errorf("Unable to create SSO resources: %v", err)
-		os.Exit(1)
-	}
-
-	var secondarySchedulerPod *corev1.Pod
-	// Wait until the secondary scheduler pod is running
-	if err := wait.PollImmediate(5*time.Second, 1*time.Minute, func() (bool, error) {
-		klog.Infof("Listing pods...")
+	// Wait for operator pod to be running
+	klog.Infof("Waiting for operator pod to be running")
+	o.Eventually(func() bool {
 		podItems, err := kubeClient.CoreV1().Pods(operatorclient.OperatorNamespace).List(ctx, metav1.ListOptions{})
 		if err != nil {
-			klog.Errorf("Unable to list pods: %v", err)
-			return false, nil
+			return false
 		}
 		for _, pod := range podItems.Items {
 			if !strings.HasPrefix(pod.Name, operatorclient.OperandName+"-") {
 				continue
 			}
-			klog.Infof("Checking pod: %v, phase: %v, deletionTS: %v\n", pod.Name, pod.Status.Phase, pod.GetDeletionTimestamp())
 			if pod.Status.Phase == corev1.PodRunning && pod.GetDeletionTimestamp() == nil {
-				secondarySchedulerPod = pod.DeepCopy()
-				return true, nil
+				klog.Infof("Operator pod %v is running", pod.Name)
+				return true
 			}
 		}
-		return false, nil
-	}); err != nil {
-		klog.Errorf("Unable to wait for the SS pod to run")
-		os.Exit(1)
-	}
+		return false
+	}, 1*time.Minute, 5*time.Second).Should(o.BeTrue(), "operator pod not running after timeout")
 
-	klog.Infof("Secondary scheduler running in %v", secondarySchedulerPod.Name)
+	klog.Infof("All operator components are running and ready")
 	os.Exit(m.Run())
 }
 
@@ -256,21 +250,19 @@ func TestScheduling(t *testing.T) {
 		})
 	}()
 
-	if err := wait.PollImmediate(1*time.Second, time.Minute, func() (bool, error) {
+	o.Eventually(func() bool {
 		klog.Infof("Listing pods...")
 		pod, err := kubeClient.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
 		if err != nil {
 			klog.Errorf("Unable to get pod: %v", err)
-			return false, nil
+			return false
 		}
 		if pod.Spec.NodeName == "" {
 			klog.Infof("Pod not yet assigned to a node")
-			return false, nil
+			return false
 		}
 		klog.Infof("Pod successfully assigned to a node: %v", pod.Spec.NodeName)
 
-		return true, nil
-	}); err != nil {
-		t.Fatalf("Unable to wait for a scheduled pod: %v", err)
-	}
+		return true
+	}, time.Minute, 1*time.Second).Should(o.BeTrue(), "pod not running after timeout")
 }
