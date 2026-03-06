@@ -113,6 +113,13 @@ func setupOperator(t testing.TB) (context.Context, context.CancelFunc, *k8sclien
 			},
 		},
 		{
+			path: "assets/04_prometheus-cluster-role-binding.yaml",
+			readerAndApply: func(objBytes []byte) error {
+				_, _, err := resourceapply.ApplyClusterRoleBinding(ctx, kubeClient.RbacV1(), eventRecorder, resourceread.ReadClusterRoleBindingV1OrDie(objBytes))
+				return err
+			},
+		},
+		{
 			path: "assets/05_deployment.yaml",
 			readerAndApply: func(objBytes []byte) error {
 				required := resourceread.ReadDeploymentV1OrDie(objBytes)
@@ -226,8 +233,8 @@ func testScheduling(t testing.TB, ctx context.Context, kubeClient *k8sclient.Cli
 	pod := &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testNamespace,
-			Name:      "test-secondary-scheduler-sheduling-pod",
-			Labels:    map[string]string{"app": "test-secondary-scheduler-sheduling"},
+			Name:      "test-secondary-scheduler-scheduling-pod",
+			Labels:    map[string]string{"app": "test-secondary-scheduler-scheduling"},
 		},
 		Spec: corev1.PodSpec{
 			SecurityContext: &corev1.PodSecurityContext{
@@ -292,4 +299,186 @@ func cleanupTestNamespace(t testing.TB, ctx context.Context, kubeClient *k8sclie
 		}
 		return false
 	}, time.Minute, 1*time.Second).Should(o.BeTrue(), "namespace not deleted after timeout")
+}
+
+// testMetricsServiceExists verifies that the metrics service exists
+func testMetricsServiceExists(t testing.TB, ctx context.Context, kubeClient *k8sclient.Clientset, serviceName string, expectedLabels map[string]string, expectedPort corev1.ServicePort) {
+	klog.Infof("Verifying metrics service exists")
+
+	// Get the actual service from the cluster
+	service, err := kubeClient.CoreV1().Services(operatorclient.OperatorNamespace).Get(ctx, serviceName, metav1.GetOptions{})
+	o.Expect(err).NotTo(o.HaveOccurred(), "metrics service should exist")
+
+	// Verify service has the correct labels
+	for key, value := range expectedLabels {
+		o.Expect(service.Labels).To(o.HaveKeyWithValue(key, value), "service should have label %s=%s", key, value)
+	}
+
+	// Verify service exposes the expected port
+	o.Expect(service.Spec.Ports).NotTo(o.BeEmpty(), "service should have at least one port")
+	found := false
+	for _, actualPort := range service.Spec.Ports {
+		if actualPort.Name == expectedPort.Name && actualPort.Port == expectedPort.Port {
+			found = true
+			break
+		}
+	}
+	o.Expect(found).To(o.BeTrue(), "service should expose port %s on port %d", expectedPort.Name, expectedPort.Port)
+
+	klog.Infof("Metrics service verified successfully")
+}
+
+// testServiceMonitorExists verifies that the ServiceMonitor exists and its selector matches the service labels
+func testServiceMonitorExists(t testing.TB, ctx context.Context, kubeClient *k8sclient.Clientset, serviceMonitorName string, expectedServiceLabels map[string]string) {
+	klog.Infof("Verifying ServiceMonitor exists")
+
+	// Get monitoring client to access ServiceMonitor (CRD from prometheus-operator)
+	monitoringClient := GetMonitoringClient()
+
+	// Get the ServiceMonitor
+	serviceMonitor, err := monitoringClient.MonitoringV1().ServiceMonitors(operatorclient.OperatorNamespace).
+		Get(ctx, serviceMonitorName, metav1.GetOptions{})
+	o.Expect(err).NotTo(o.HaveOccurred(), "ServiceMonitor should exist")
+
+	// Verify ServiceMonitor has the correct spec
+	o.Expect(serviceMonitor.Spec.Selector).NotTo(o.BeNil(), "ServiceMonitor should have selector")
+	o.Expect(serviceMonitor.Spec.Selector.MatchLabels).NotTo(o.BeNil(), "selector should have matchLabels")
+
+	// Verify ServiceMonitor selector matches the service labels
+	for key, value := range expectedServiceLabels {
+		o.Expect(serviceMonitor.Spec.Selector.MatchLabels).To(o.HaveKeyWithValue(key, value), "ServiceMonitor selector should match service label %s=%s", key, value)
+	}
+
+	klog.Infof("ServiceMonitor verified successfully")
+}
+
+// testPrometheusTargetUp verifies that the Prometheus target is up and scraping metrics
+func testPrometheusTargetUp(t testing.TB, ctx context.Context, kubeClient *k8sclient.Clientset, serviceMonitorName string, metricsServiceName string, serviceLabels map[string]string, metricsPort corev1.ServicePort, podLabels map[string]string) {
+	klog.Infof("Verifying Prometheus target is up")
+
+	// Get the Prometheus token for authentication
+	token, err := getPrometheusToken(ctx, kubeClient, podLabels)
+	o.Expect(err).NotTo(o.HaveOccurred(), "should get Prometheus token")
+
+	// Get the Route client
+	routeClient := GetRouteClient()
+
+	// Query Prometheus targets API
+	klog.Infof("Querying Prometheus for secondary-scheduler target status")
+
+	o.Eventually(func() bool {
+		// First, get all EndpointSlices matching the service labels
+		endpointAddresses, err := getEndpointAddressesForService(ctx, kubeClient, operatorclient.OperatorNamespace, serviceLabels)
+		if err != nil {
+			klog.Errorf("Failed to get endpoint addresses: %v", err)
+			return false
+		}
+
+		if len(endpointAddresses) == 0 {
+			klog.Infof("No endpoints found for service yet, waiting...")
+			return false
+		}
+
+		klog.Infof("Found %d endpoint(s) for service", len(endpointAddresses))
+
+		// Query each endpoint individually
+		allEndpointsHealthy := true
+		for _, endpointIP := range endpointAddresses {
+			// Construct the instance string as "IP:port"
+			instance := fmt.Sprintf("%s:%d", endpointIP, metricsPort.TargetPort.IntVal)
+
+			klog.Infof("Querying Prometheus for instance: %s", instance)
+
+			result, err := queryPrometheusTarget(ctx, kubeClient, routeClient, token, serviceMonitorName, instance)
+			if err != nil {
+				klog.Errorf("Failed to query Prometheus target for instance %s: %v", instance, err)
+				allEndpointsHealthy = false
+				continue
+			}
+
+			// Check if we got any results (target exists)
+			if len(result.Data.Result) == 0 {
+				klog.Infof("Target for instance %s not found yet in Prometheus, waiting...", instance)
+				allEndpointsHealthy = false
+				continue
+			}
+
+			// The 'up' metric returns 1 if target is healthy, 0 if down
+			series := result.Data.Result[0]
+			if len(series.Value) < 2 {
+				klog.Warningf("Instance %s: unexpected metric value format: %v", instance, series.Value)
+				allEndpointsHealthy = false
+				continue
+			}
+
+			valueStr, ok := series.Value[1].(string)
+			if !ok {
+				klog.Warningf("Instance %s: metric value is not a string: %v", instance, series.Value[1])
+				allEndpointsHealthy = false
+				continue
+			}
+
+			klog.Infof("Instance %s: up=%s, labels=%v", instance, valueStr, series.Metric)
+
+			if valueStr != "1" {
+				klog.Warningf("Instance %s is not up yet", instance)
+				allEndpointsHealthy = false
+			} else {
+				klog.Infof("Instance %s is healthy", instance)
+			}
+		}
+
+		if allEndpointsHealthy {
+			klog.Infof("All endpoints have healthy Prometheus targets")
+			return true
+		}
+
+		klog.Warningf("Not all endpoints are healthy yet, waiting...")
+		return false
+	}, 5*time.Minute, 10*time.Second).Should(o.BeTrue(), "Prometheus target should be up")
+
+	klog.Infof("Prometheus target verified successfully")
+}
+
+// testMetricsDataAvailable verifies that specific metrics are available and have data
+func testMetricsDataAvailable(t testing.TB, ctx context.Context, kubeClient *k8sclient.Clientset, podLabels map[string]string) {
+	klog.Infof("Verifying metrics data is available")
+
+	// Get the Prometheus token for authentication
+	token, err := getPrometheusToken(ctx, kubeClient, podLabels)
+	o.Expect(err).NotTo(o.HaveOccurred(), "should get Prometheus token")
+
+	// Get the Route client
+	routeClient := GetRouteClient()
+
+	// Query for the specific metric
+	metricQuery := `scheduler_pod_scheduling_attempts_bucket{container="secondary-scheduler"}`
+
+	klog.Infof("Querying Prometheus for metric: %s", metricQuery)
+
+	o.Eventually(func() bool {
+		result, err := queryPrometheusMetric(ctx, kubeClient, routeClient, token, metricQuery)
+		if err != nil {
+			klog.Errorf("Failed to query Prometheus metric: %v", err)
+			return false
+		}
+
+		// Check if we have any results
+		if len(result.Data.Result) == 0 {
+			klog.Infof("No results found for metric %s yet, waiting...", metricQuery)
+			return false
+		}
+
+		// Verify we have data
+		klog.Infof("Found %d metric series for %s", len(result.Data.Result), metricQuery)
+		for i, series := range result.Data.Result {
+			if len(series.Value) > 0 {
+				klog.Infof("Series %d: metric=%v, value=%v", i, series.Metric, series.Value)
+			}
+		}
+
+		return true
+	}, 5*time.Minute, 10*time.Second).Should(o.BeTrue(), "Metric data should be available")
+
+	klog.Infof("Metrics data verified successfully")
 }
