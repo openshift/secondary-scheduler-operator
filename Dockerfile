@@ -4,7 +4,7 @@ COPY . .
 RUN make build --warn-undefined-variables \
     && gzip secondary-scheduler-operator-tests-ext
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:latest@sha256:c7d44146f826037f6873d99da479299b889473492d3c1ab8af86f08af04ec8a0
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest@sha256:69f5c9886ecb19b23e88275a5cd904c47dd982dfa370fbbd0c356d7b1047ef68
 COPY --from=builder /go/src/github.com/openshift/secondary-scheduler-operator/secondary-scheduler-operator /usr/bin/
 COPY --from=builder /go/src/github.com/openshift/secondary-scheduler-operator/secondary-scheduler-operator-tests-ext.gz /usr/bin/
 RUN mkdir /licenses
