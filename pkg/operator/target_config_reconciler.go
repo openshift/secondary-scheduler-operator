@@ -163,6 +163,22 @@ func (c TargetConfigReconciler) sync(item queueItem) error {
 			annotationKey: "clusterrolebindings/secondary-scheduler-system-volume-scheduler",
 			manageFunc:    c.manageVolumeSchedulerClusterRoleBinding,
 		},
+		{
+			annotationKey: "services/metrics",
+			manageFunc:    c.manageService,
+		},
+		{
+			annotationKey: "roles/prometheus-k8s",
+			manageFunc:    c.manageRole,
+		},
+		{
+			annotationKey: "rolebindings/prometheus-k8s",
+			manageFunc:    c.manageRoleBinding,
+		},
+		{
+			annotationKey: "servicemonitors/secondary-scheduler",
+			manageFunc:    c.manageServiceMonitor,
+		},
 	}
 
 	for _, mr := range managedResources {
@@ -241,6 +257,72 @@ func (c *TargetConfigReconciler) manageVolumeSchedulerClusterRoleBinding(seconda
 	controller.EnsureOwnerRef(required, ownerReference)
 
 	return resourceapply.ApplyClusterRoleBinding(c.ctx, c.kubeClient.RbacV1(), c.eventRecorder, required)
+}
+
+func (c *TargetConfigReconciler) manageRole(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
+	required := resourceread.ReadRoleV1OrDie(bindata.MustAsset("assets/secondary-scheduler/role.yaml"))
+	required.Namespace = secondaryScheduler.Namespace
+	ownerReference := metav1.OwnerReference{
+		APIVersion: "operator.openshift.io/v1",
+		Kind:       "SecondaryScheduler",
+		Name:       secondaryScheduler.Name,
+		UID:        secondaryScheduler.UID,
+	}
+	required.OwnerReferences = []metav1.OwnerReference{
+		ownerReference,
+	}
+	controller.EnsureOwnerRef(required, ownerReference)
+
+	return resourceapply.ApplyRole(c.ctx, c.kubeClient.RbacV1(), c.eventRecorder, required)
+}
+
+func (c *TargetConfigReconciler) manageRoleBinding(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
+	required := resourceread.ReadRoleBindingV1OrDie(bindata.MustAsset("assets/secondary-scheduler/rolebinding.yaml"))
+	required.Namespace = secondaryScheduler.Namespace
+	ownerReference := metav1.OwnerReference{
+		APIVersion: "operator.openshift.io/v1",
+		Kind:       "SecondaryScheduler",
+		Name:       secondaryScheduler.Name,
+		UID:        secondaryScheduler.UID,
+	}
+	required.OwnerReferences = []metav1.OwnerReference{
+		ownerReference,
+	}
+	controller.EnsureOwnerRef(required, ownerReference)
+
+	return resourceapply.ApplyRoleBinding(c.ctx, c.kubeClient.RbacV1(), c.eventRecorder, required)
+}
+
+func (c *TargetConfigReconciler) manageService(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
+	required := resourceread.ReadServiceV1OrDie(bindata.MustAsset("assets/secondary-scheduler/service.yaml"))
+	required.Namespace = secondaryScheduler.Namespace
+	ownerReference := metav1.OwnerReference{
+		APIVersion: "operator.openshift.io/v1",
+		Kind:       "SecondaryScheduler",
+		Name:       secondaryScheduler.Name,
+		UID:        secondaryScheduler.UID,
+	}
+	required.OwnerReferences = []metav1.OwnerReference{
+		ownerReference,
+	}
+	controller.EnsureOwnerRef(required, ownerReference)
+
+	return resourceapply.ApplyService(c.ctx, c.kubeClient.CoreV1(), c.eventRecorder, required)
+}
+
+func (c *TargetConfigReconciler) manageServiceMonitor(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
+	required := resourceread.ReadUnstructuredOrDie(bindata.MustAsset("assets/secondary-scheduler/servicemonitor.yaml"))
+	required.SetNamespace(secondaryScheduler.Namespace)
+	ownerReference := metav1.OwnerReference{
+		APIVersion: "operator.openshift.io/v1",
+		Kind:       "SecondaryScheduler",
+		Name:       secondaryScheduler.Name,
+		UID:        secondaryScheduler.UID,
+	}
+	required.SetOwnerReferences([]metav1.OwnerReference{ownerReference})
+	controller.EnsureOwnerRef(required, ownerReference)
+
+	return resourceapply.ApplyKnownUnstructured(c.ctx, c.dynamicClient, c.eventRecorder, required)
 }
 
 func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler, specAnnotations map[string]string) (*appsv1.Deployment, bool, error) {
