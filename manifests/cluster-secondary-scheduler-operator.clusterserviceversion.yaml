@@ -148,6 +148,8 @@ spec:
           - serviceaccounts
           - configmaps
           - events
+          - services
+          - endpoints
           verbs:
           - create
           - delete
@@ -169,6 +171,8 @@ spec:
           - rbac.authorization.k8s.io
           resources:
           - clusterrolebindings
+          - roles
+          - rolebindings
           verbs:
           - create
           - delete
@@ -210,6 +214,17 @@ spec:
           - get
           - list
           - watch
+        - apiGroups:
+          - monitoring.coreos.com
+          resources:
+          - servicemonitors
+          verbs:
+          - get
+          - watch
+          - list
+          - create
+          - update
+          - patch
       deployments:
       - name: secondary-scheduler-operator
         spec:

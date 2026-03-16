@@ -30,7 +30,9 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes"
@@ -151,8 +153,15 @@ func setupFakeClients(t *testing.T, apiServer *configv1.APIServer, secondarySche
 		configInformers.Config().V1().APIServers().Informer().GetIndexer().Add(apiServer)
 	}
 
-	// Create fake dynamic client
-	dynamicClient := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme())
+	// Create fake dynamic client for unstructured resources (e.g., ServiceMonitor)
+	scheme := runtime.NewScheme()
+	if err := corev1.AddToScheme(scheme); err != nil {
+		t.Fatalf("Failed to add corev1 to scheme: %v", err)
+	}
+	if err := rbacv1.AddToScheme(scheme); err != nil {
+		t.Fatalf("Failed to add rbacv1 to scheme: %v", err)
+	}
+	dynamicClient := dynamicfake.NewSimpleDynamicClient(scheme)
 
 	// Create fake operator client
 	fakeOperatorConfigClient := operatorclientfake.NewSimpleClientset(secondaryScheduler)
@@ -175,6 +184,7 @@ type testSetup struct {
 	reconciler              *TargetConfigReconciler
 	operatorClient          *operatorclient.SecondarySchedulerClient
 	kubeClient              kubernetes.Interface
+	dynamicClient           dynamic.Interface
 	kubeInformers           v1helpers.KubeInformersForNamespaces
 	configInformers         configinformers.SharedInformerFactory
 	operatorConfigInformers operatorclientinformers.SharedInformerFactory
@@ -231,6 +241,7 @@ func setupTestReconciler(
 		reconciler:              targetConfigReconciler,
 		operatorClient:          fakeOperatorClient,
 		kubeClient:              fakeKubeClient,
+		dynamicClient:           dynamicClient,
 		kubeInformers:           kubeInformersForNamespaces,
 		configInformers:         configInformers,
 		operatorConfigInformers: operatorConfigInformers,
@@ -657,6 +668,66 @@ func TestManageResources(t *testing.T) {
 			verifyRestore:  func(t *testing.T, obj metav1.Object) {},
 		},
 		{
+			resourceType: "Service",
+			resourceName: "metrics",
+			manageFunc:   (*TargetConfigReconciler).manageService,
+			getResource: func(ctx context.Context, setup *testSetup, name string) (metav1.Object, error) {
+				return setup.kubeClient.CoreV1().Services(operatorclient.OperatorNamespace).Get(ctx, name, metav1.GetOptions{})
+			},
+			updateResource: func(ctx context.Context, setup *testSetup, obj metav1.Object) error {
+				_, err := setup.kubeClient.CoreV1().Services(operatorclient.OperatorNamespace).Update(ctx, obj.(*corev1.Service), metav1.UpdateOptions{})
+				return err
+			},
+			modifyResource: func(t *testing.T, obj metav1.Object) {
+				obj.(*corev1.Service).Spec.Selector = map[string]string{"app": "wrong-app"}
+			},
+			verifyRestore: func(t *testing.T, obj metav1.Object) {
+				if diff := cmp.Diff(map[string]string{"app": "secondary-scheduler"}, obj.(*corev1.Service).Spec.Selector); diff != "" {
+					t.Errorf("Expected selector to be restored, diff (-want +got):\n%s", diff)
+				}
+			},
+		},
+		{
+			resourceType: "Role",
+			resourceName: "prometheus-k8s",
+			manageFunc:   (*TargetConfigReconciler).manageRole,
+			getResource: func(ctx context.Context, setup *testSetup, name string) (metav1.Object, error) {
+				return setup.kubeClient.RbacV1().Roles(operatorclient.OperatorNamespace).Get(ctx, name, metav1.GetOptions{})
+			},
+			updateResource: func(ctx context.Context, setup *testSetup, obj metav1.Object) error {
+				_, err := setup.kubeClient.RbacV1().Roles(operatorclient.OperatorNamespace).Update(ctx, obj.(*rbacv1.Role), metav1.UpdateOptions{})
+				return err
+			},
+			modifyResource: func(t *testing.T, obj metav1.Object) {
+				obj.(*rbacv1.Role).Rules[0].Verbs = []string{"create", "delete"}
+			},
+			verifyRestore: func(t *testing.T, obj metav1.Object) {
+				if diff := cmp.Diff([]string{"get", "list", "watch"}, obj.(*rbacv1.Role).Rules[0].Verbs); diff != "" {
+					t.Errorf("Expected verbs to be restored, diff (-want +got):\n%s", diff)
+				}
+			},
+		},
+		{
+			resourceType: "RoleBinding",
+			resourceName: "prometheus-k8s",
+			manageFunc:   (*TargetConfigReconciler).manageRoleBinding,
+			getResource: func(ctx context.Context, setup *testSetup, name string) (metav1.Object, error) {
+				return setup.kubeClient.RbacV1().RoleBindings(operatorclient.OperatorNamespace).Get(ctx, name, metav1.GetOptions{})
+			},
+			updateResource: func(ctx context.Context, setup *testSetup, obj metav1.Object) error {
+				_, err := setup.kubeClient.RbacV1().RoleBindings(operatorclient.OperatorNamespace).Update(ctx, obj.(*rbacv1.RoleBinding), metav1.UpdateOptions{})
+				return err
+			},
+			modifyResource: func(t *testing.T, obj metav1.Object) {
+				obj.(*rbacv1.RoleBinding).Subjects[0].Namespace = "wrong-namespace"
+			},
+			verifyRestore: func(t *testing.T, obj metav1.Object) {
+				if obj.(*rbacv1.RoleBinding).Subjects[0].Namespace != "openshift-monitoring" {
+					t.Errorf("Expected namespace to be restored to %q, got %q", "openshift-monitoring", obj.(*rbacv1.RoleBinding).Subjects[0].Namespace)
+				}
+			},
+		},
+		{
 			resourceType:        "ClusterRoleBinding",
 			resourceName:        kubeSchedulerClusterRoleBindingName,
 			skipNamespaceVerify: true,
@@ -682,6 +753,44 @@ func TestManageResources(t *testing.T) {
 				}
 				if crb.Subjects[0].Namespace != operatorclient.OperatorNamespace {
 					t.Errorf("Expected subject namespace to be restored to %q, got %q", operatorclient.OperatorNamespace, crb.Subjects[0].Namespace)
+				}
+			},
+		},
+		{
+			resourceType: "ServiceMonitor",
+			resourceName: "secondary-scheduler",
+			manageFunc:   (*TargetConfigReconciler).manageServiceMonitor,
+			getResource: func(ctx context.Context, setup *testSetup, name string) (metav1.Object, error) {
+				gvr := schema.GroupVersionResource{Group: "monitoring.coreos.com", Version: "v1", Resource: "servicemonitors"}
+				return setup.dynamicClient.Resource(gvr).Namespace(operatorclient.OperatorNamespace).Get(ctx, name, metav1.GetOptions{})
+			},
+			updateResource: func(ctx context.Context, setup *testSetup, obj metav1.Object) error {
+				gvr := schema.GroupVersionResource{Group: "monitoring.coreos.com", Version: "v1", Resource: "servicemonitors"}
+				_, err := setup.dynamicClient.Resource(gvr).Namespace(operatorclient.OperatorNamespace).Update(ctx, obj.(*unstructured.Unstructured), metav1.UpdateOptions{})
+				return err
+			},
+			modifyResource: func(t *testing.T, obj metav1.Object) {
+				sm := obj.(*unstructured.Unstructured)
+				endpoints, found, err := unstructured.NestedSlice(sm.Object, "spec", "endpoints")
+				if err != nil || !found || len(endpoints) == 0 {
+					return
+				}
+				endpoint := endpoints[0].(map[string]interface{})
+				endpoint["interval"] = "99s"
+				endpoints[0] = endpoint
+				_ = unstructured.SetNestedSlice(sm.Object, endpoints, "spec", "endpoints")
+			},
+			verifyRestore: func(t *testing.T, obj metav1.Object) {
+				sm := obj.(*unstructured.Unstructured)
+				restoredEndpoints, found, err := unstructured.NestedSlice(sm.Object, "spec", "endpoints")
+				if err != nil || !found || len(restoredEndpoints) == 0 {
+					t.Fatalf("Failed to get endpoints from restored ServiceMonitor: found=%v, err=%v", found, err)
+				}
+				restoredEndpoint := restoredEndpoints[0].(map[string]interface{})
+				restoredInterval := restoredEndpoint["interval"]
+				expectedInterval := "30s"
+				if restoredInterval != expectedInterval {
+					t.Errorf("Expected interval to be restored to %q, got %q", expectedInterval, restoredInterval)
 				}
 			},
 		},
@@ -851,6 +960,21 @@ func TestSync(t *testing.T) {
 			t.Errorf("Expected VolumeScheduler ClusterRoleBinding to not exist (NotFound error), got: %v", err)
 		}
 
+		_, err = setup.kubeClient.CoreV1().Services(operatorclient.OperatorNamespace).Get(ctx, "metrics", metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
+			t.Errorf("Expected Service to not exist (NotFound error), got: %v", err)
+		}
+
+		_, err = setup.kubeClient.RbacV1().Roles(operatorclient.OperatorNamespace).Get(ctx, "prometheus-k8s", metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
+			t.Errorf("Expected Role to not exist (NotFound error), got: %v", err)
+		}
+
+		_, err = setup.kubeClient.RbacV1().RoleBindings(operatorclient.OperatorNamespace).Get(ctx, "prometheus-k8s", metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
+			t.Errorf("Expected RoleBinding to not exist (NotFound error), got: %v", err)
+		}
+
 		_, err = setup.kubeClient.AppsV1().Deployments(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperandName, metav1.GetOptions{})
 		if !apierrors.IsNotFound(err) {
 			t.Errorf("Expected Deployment to not exist (NotFound error), got: %v", err)
@@ -885,6 +1009,30 @@ func TestSync(t *testing.T) {
 			verifyOwnerReference(t, volumeSchedulerCRB)
 		}
 
+		service, err := setup.kubeClient.CoreV1().Services(operatorclient.OperatorNamespace).Get(ctx, "metrics", metav1.GetOptions{})
+		if err != nil {
+			t.Errorf("Failed to get Service after sync: %v", err)
+		} else {
+			verifyNamespace(t, service)
+			verifyOwnerReference(t, service)
+		}
+
+		role, err := setup.kubeClient.RbacV1().Roles(operatorclient.OperatorNamespace).Get(ctx, "prometheus-k8s", metav1.GetOptions{})
+		if err != nil {
+			t.Errorf("Failed to get Role after sync: %v", err)
+		} else {
+			verifyNamespace(t, role)
+			verifyOwnerReference(t, role)
+		}
+
+		roleBinding, err := setup.kubeClient.RbacV1().RoleBindings(operatorclient.OperatorNamespace).Get(ctx, "prometheus-k8s", metav1.GetOptions{})
+		if err != nil {
+			t.Errorf("Failed to get RoleBinding after sync: %v", err)
+		} else {
+			verifyNamespace(t, roleBinding)
+			verifyOwnerReference(t, roleBinding)
+		}
+
 		deployment, err := setup.kubeClient.AppsV1().Deployments(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperandName, metav1.GetOptions{})
 		if err != nil {
 			t.Errorf("Failed to get Deployment after sync: %v", err)
@@ -908,6 +1056,10 @@ func TestSync(t *testing.T) {
 					"serviceaccounts/secondary-scheduler",
 					"clusterrolebindings/secondary-scheduler-system-kube-scheduler",
 					"clusterrolebindings/secondary-scheduler-system-volume-scheduler",
+					"services/metrics",
+					"roles/prometheus-k8s",
+					"rolebindings/prometheus-k8s",
+					"servicemonitors/secondary-scheduler",
 				}
 
 				for _, key := range expectedAnnotations {
@@ -1022,12 +1174,19 @@ func TestSyncResourceVersionAnnotations(t *testing.T) {
 			// Add reactors to set ResourceVersions when resources are created
 			if tc.resourceVersion != "" {
 				fakeClient := setup.kubeClient.(*kubefake.Clientset)
-				for _, resource := range []string{"serviceaccounts", "clusterrolebindings"} {
+				for _, resource := range []string{"serviceaccounts", "clusterrolebindings", "services", "roles", "rolebindings"} {
 					fakeClient.PrependReactor("create", resource, func(action kubetesting.Action) (handled bool, ret runtime.Object, err error) {
 						action.(kubetesting.CreateAction).GetObject().(metav1.Object).SetResourceVersion(tc.resourceVersion)
 						return false, nil, nil
 					})
 				}
+				fakeDynamicClient := setup.dynamicClient.(*dynamicfake.FakeDynamicClient)
+				fakeDynamicClient.PrependReactor("create", "*", func(action kubetesting.Action) (handled bool, ret runtime.Object, err error) {
+					createAction := action.(kubetesting.CreateAction)
+					obj := createAction.GetObject().(*unstructured.Unstructured)
+					obj.SetResourceVersion(tc.resourceVersion)
+					return false, nil, nil
+				})
 			}
 
 			setup.kubeInformers.Start(ctx.Done())
@@ -1041,7 +1200,6 @@ func TestSyncResourceVersionAnnotations(t *testing.T) {
 
 			item := queueItem{
 				kind: "secondaryscheduler",
-				name: "",
 			}
 
 			if err := setup.reconciler.sync(item); err != nil {
@@ -1065,6 +1223,10 @@ func TestSyncResourceVersionAnnotations(t *testing.T) {
 				"serviceaccounts/secondary-scheduler":                          tc.resourceVersion,
 				"clusterrolebindings/" + kubeSchedulerClusterRoleBindingName:   tc.resourceVersion,
 				"clusterrolebindings/" + volumeSchedulerClusterRoleBindingName: tc.resourceVersion,
+				"services/metrics":                    tc.resourceVersion,
+				"roles/prometheus-k8s":                tc.resourceVersion,
+				"rolebindings/prometheus-k8s":         tc.resourceVersion,
+				"servicemonitors/secondary-scheduler": tc.resourceVersion,
 			}
 
 			for key, expectedValue := range expectedAnnotations {

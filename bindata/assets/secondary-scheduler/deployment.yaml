@@ -25,6 +25,9 @@ spec:
             name: ${CONFIGMAP}
         - name: tmp
           emptyDir: {}
+        - name: certs-dir
+          secret:
+            secretName: secondary-scheduler-serving-cert
       restartPolicy: "Always"
       containers:
         - name: "secondary-scheduler"
@@ -38,6 +41,8 @@ spec:
             - /bin/kube-scheduler
           args:
             - --config=/etc/kubernetes/config.yaml
+            - --tls-cert-file=/certs-dir/tls.crt
+            - --tls-private-key-file=/certs-dir/tls.key
           env:
           - name: ENABLE_OPENSHIFT_AUTH
             value: "true"
@@ -66,4 +71,6 @@ spec:
               name: "etckubernetes"
             - name: tmp
               mountPath: "/tmp"
+            - mountPath: "/certs-dir"
+              name: certs-dir
       serviceAccountName: "secondary-scheduler"
