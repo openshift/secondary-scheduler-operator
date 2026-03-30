@@ -47,6 +47,10 @@ const (
 	kubeSchedulerClusterRoleBindingName   = "secondary-scheduler-system-kube-scheduler"
 	volumeSchedulerClusterRoleBindingName = "secondary-scheduler-system-volume-scheduler"
 	schedulerConfigMapName                = "test-config"
+
+	nodeRoleLabelControlPlane = "node-role.kubernetes.io/control-plane"
+	nodeRoleLabelWorker       = "node-role.kubernetes.io/worker"
+	nodeRoleLabelMaster       = "node-role.kubernetes.io/master"
 )
 
 func newOwnerReference() []metav1.OwnerReference {
@@ -547,6 +551,253 @@ func TestManageDeployment_Replacements(t *testing.T) {
 
 			// Run test-specific verification
 			tt.verify(t, actualDeployment)
+		})
+	}
+}
+
+func TestManageDeployment_Topology(t *testing.T) {
+	tests := []struct {
+		name                 string
+		mode                 secondaryschedulersv1.TopologyMode
+		controlPlaneNodes    int
+		workerNodes          int
+		nodeSelector         *map[string]string
+		tolerations          []corev1.Toleration
+		maxReplicas          uint32
+		expectedReplicas     int32
+		expectedNodeSelector map[string]string
+		expectedTolerations  []corev1.Toleration
+		expectError          bool
+	}{
+		{
+			name:              "Topology unset - uses default from deployment asset",
+			mode:              "",
+			controlPlaneNodes: 3,
+			workerNodes:       5,
+			expectedReplicas:  1,
+		},
+		{
+			name:              "SingleReplica mode - uses default from deployment asset",
+			mode:              secondaryschedulersv1.SingleReplicaMode,
+			controlPlaneNodes: 3,
+			workerNodes:       5,
+			expectedReplicas:  1,
+		},
+		{
+			name:              "HighlyAvailable mode with 1 control plane node with maxReplicas set to 3",
+			mode:              secondaryschedulersv1.HighlyAvailableMode,
+			controlPlaneNodes: 1,
+			maxReplicas:       3,
+			expectedReplicas:  1,
+		},
+		{
+			name:              "HighlyAvailable mode with 3 control plane nodes with maxReplicas set to 3",
+			mode:              secondaryschedulersv1.HighlyAvailableMode,
+			controlPlaneNodes: 3,
+			maxReplicas:       3,
+			expectedReplicas:  3,
+		},
+		{
+			name:              "HighlyAvailable mode with 5 control plane nodes with maxReplicas set to 3",
+			mode:              secondaryschedulersv1.HighlyAvailableMode,
+			controlPlaneNodes: 5,
+			maxReplicas:       3,
+			expectedReplicas:  3,
+		},
+		{
+			name:              "HighlyAvailable mode with 3 control plane and 10 worker nodes with maxReplicas set to 3",
+			mode:              secondaryschedulersv1.HighlyAvailableMode,
+			controlPlaneNodes: 4,
+			workerNodes:       10,
+			maxReplicas:       3,
+			expectedReplicas:  3,
+		},
+		{
+			name:              "HA mode with custom nodeSelector targeting workers with maxReplicas set to 6 expecting 5",
+			mode:              secondaryschedulersv1.HighlyAvailableMode,
+			controlPlaneNodes: 2,
+			workerNodes:       5,
+			nodeSelector: &map[string]string{
+				nodeRoleLabelWorker: "",
+			},
+			maxReplicas:      6,
+			expectedReplicas: 5,
+			expectedNodeSelector: map[string]string{
+				nodeRoleLabelWorker: "",
+			},
+		},
+		{
+			name:        "HA mode with nodeSelector targeting workers and tolerations",
+			mode:        secondaryschedulersv1.HighlyAvailableMode,
+			workerNodes: 3,
+			nodeSelector: &map[string]string{
+				nodeRoleLabelWorker: "",
+			},
+			tolerations: []corev1.Toleration{
+				{
+					Key:      nodeRoleLabelMaster,
+					Operator: corev1.TolerationOpExists,
+					Effect:   corev1.TaintEffectNoSchedule,
+				},
+				{
+					Key:      "node.kubernetes.io/not-ready",
+					Operator: corev1.TolerationOpExists,
+					Effect:   corev1.TaintEffectNoExecute,
+				},
+			},
+			maxReplicas:      2,
+			expectedReplicas: 2,
+			expectedNodeSelector: map[string]string{
+				nodeRoleLabelWorker: "",
+			},
+			expectedTolerations: []corev1.Toleration{
+				{
+					Key:      nodeRoleLabelMaster,
+					Operator: corev1.TolerationOpExists,
+					Effect:   corev1.TaintEffectNoSchedule,
+				},
+				{
+					Key:      "node.kubernetes.io/not-ready",
+					Operator: corev1.TolerationOpExists,
+					Effect:   corev1.TaintEffectNoExecute,
+				},
+			},
+		},
+		{
+			name:              "HA mode with maxReplicas=0 - returns error",
+			mode:              secondaryschedulersv1.HighlyAvailableMode,
+			controlPlaneNodes: 3,
+			maxReplicas:       0,
+			expectError:       true,
+		},
+		{
+			name: "Non-HA mode with nodeSelector - nodeSelector not applied",
+			mode: "",
+			nodeSelector: &map[string]string{
+				nodeRoleLabelControlPlane: "",
+			},
+			expectedReplicas: 1,
+		},
+		{
+			name: "Non-HA mode with tolerations - tolerations not applied",
+			mode: "",
+			tolerations: []corev1.Toleration{
+				{
+					Key:      nodeRoleLabelMaster,
+					Operator: corev1.TolerationOpExists,
+					Effect:   corev1.TaintEffectNoSchedule,
+				},
+			},
+			expectedReplicas: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.TODO())
+			defer cancel()
+
+			// Create control plane nodes and worker nodes
+			coreObjects := []runtime.Object{newSchedulerConfigMap(nil)}
+
+			// Add control plane nodes
+			for i := 0; i < tt.controlPlaneNodes; i++ {
+				node := &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: fmt.Sprintf("control-plane-%d", i),
+						Labels: map[string]string{
+							nodeRoleLabelControlPlane: "",
+						},
+					},
+				}
+				coreObjects = append(coreObjects, node)
+			}
+
+			// Add worker nodes
+			for i := 0; i < tt.workerNodes; i++ {
+				node := &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: fmt.Sprintf("worker-%d", i),
+						Labels: map[string]string{
+							nodeRoleLabelWorker: "",
+						},
+					},
+				}
+				coreObjects = append(coreObjects, node)
+			}
+
+			// Setup fake clients with custom SecondaryScheduler
+			setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(func(obj *secondaryschedulersv1.SecondaryScheduler) {
+				if tt.mode != "" {
+					obj.Spec.Topology.Mode = tt.mode
+				}
+				// Initialize HighlyAvailableTopology if in HA mode or if any HA-specific fields are set
+				if tt.mode == secondaryschedulersv1.HighlyAvailableMode || tt.nodeSelector != nil || tt.tolerations != nil {
+					obj.Spec.Topology.HighlyAvailableTopology = &secondaryschedulersv1.HighlyAvailableTopology{}
+					if tt.nodeSelector != nil {
+						obj.Spec.Topology.HighlyAvailableTopology.NodeSelector = tt.nodeSelector
+					}
+					if tt.tolerations != nil {
+						obj.Spec.Topology.HighlyAvailableTopology.Tolerations = &tt.tolerations
+					}
+					// Always set maxReplicas in HA mode (even if 0 for validation testing)
+					obj.Spec.Topology.HighlyAvailableTopology.MaxReplicas = tt.maxReplicas
+				}
+			}), coreObjects)
+
+			// Start informers
+			setup.kubeInformers.Start(ctx.Done())
+			setup.configInformers.Start(ctx.Done())
+			setup.operatorConfigInformers.Start(ctx.Done())
+
+			// Get the SecondaryScheduler object
+			secondaryScheduler, err := setup.operatorClient.OperatorClient.SecondarySchedulers(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperatorConfigName, metav1.GetOptions{})
+			if err != nil {
+				t.Fatalf("Failed to get SecondaryScheduler: %v", err)
+			}
+
+			// Call manageDeployment
+			_, _, err = setup.reconciler.manageDeployment(secondaryScheduler, nil)
+			if tt.expectError {
+				if err == nil {
+					t.Fatalf("Expected an error, but got none")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("manageDeployment failed: %v", err)
+			}
+
+			// Verify the Deployment was created with the correct replicas
+			actualDeployment, err := setup.kubeClient.AppsV1().Deployments(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperandName, metav1.GetOptions{})
+			if err != nil {
+				t.Fatalf("Failed to get Deployment: %v", err)
+			}
+
+			if actualDeployment.Spec.Replicas == nil {
+				t.Fatalf("Expected Spec.Replicas to be set, got nil")
+			}
+			if *actualDeployment.Spec.Replicas != tt.expectedReplicas {
+				t.Errorf("Expected replicas=%d, got %d", tt.expectedReplicas, *actualDeployment.Spec.Replicas)
+			}
+
+			// Verify nodeSelector
+			if tt.expectedNodeSelector != nil {
+				if diff := cmp.Diff(tt.expectedNodeSelector, actualDeployment.Spec.Template.Spec.NodeSelector); diff != "" {
+					t.Errorf("NodeSelector mismatch (-want +got):\n%s", diff)
+				}
+			} else if len(actualDeployment.Spec.Template.Spec.NodeSelector) > 0 {
+				t.Errorf("Expected no NodeSelector, got %v", actualDeployment.Spec.Template.Spec.NodeSelector)
+			}
+
+			// Verify tolerations
+			if tt.expectedTolerations != nil {
+				if diff := cmp.Diff(tt.expectedTolerations, actualDeployment.Spec.Template.Spec.Tolerations); diff != "" {
+					t.Errorf("Tolerations mismatch (-want +got):\n%s", diff)
+				}
+			} else if len(actualDeployment.Spec.Template.Spec.Tolerations) > 0 {
+				t.Errorf("Expected no Tolerations, got %v", actualDeployment.Spec.Template.Spec.Tolerations)
+			}
 		})
 	}
 }
@@ -1291,12 +1542,12 @@ func TestSyncResourceVersionAnnotations(t *testing.T) {
 				"serviceaccounts/secondary-scheduler":                          tc.resourceVersion,
 				"clusterrolebindings/" + kubeSchedulerClusterRoleBindingName:   tc.resourceVersion,
 				"clusterrolebindings/" + volumeSchedulerClusterRoleBindingName: tc.resourceVersion,
-				"services/metrics":                        tc.resourceVersion,
-				"roles/prometheus-k8s":                    tc.resourceVersion,
-				"rolebindings/prometheus-k8s":             tc.resourceVersion,
-				"roles/secondary-scheduler-operand":       tc.resourceVersion,
+				"services/metrics":                         tc.resourceVersion,
+				"roles/prometheus-k8s":                     tc.resourceVersion,
+				"rolebindings/prometheus-k8s":              tc.resourceVersion,
+				"roles/secondary-scheduler-operand":        tc.resourceVersion,
 				"rolebindings/secondary-scheduler-operand": tc.resourceVersion,
-				"servicemonitors/secondary-scheduler":     tc.resourceVersion,
+				"servicemonitors/secondary-scheduler":      tc.resourceVersion,
 			}
 
 			for key, expectedValue := range expectedAnnotations {
