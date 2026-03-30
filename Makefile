@@ -44,6 +44,8 @@ regen-crd:
 	cp manifests/secondary-scheduler-operator.crd.yaml manifests/operator.openshift.io_secondaryschedulers.yaml
 	./_output/tools/bin/controller-gen crd paths=./pkg/apis/secondaryscheduler/v1/... schemapatch:manifests=./manifests output:crd:dir=./manifests
 	mv manifests/operator.openshift.io_secondaryschedulers.yaml manifests/secondary-scheduler-operator.crd.yaml
+	cp manifests/secondary-scheduler-operator.crd.yaml test/e2e/bindata/assets/00_secondary-scheduler-operator.crd.yaml
+	cp manifests/secondary-scheduler-operator.crd.yaml deploy/00_secondary-scheduler-operator.crd.yaml
 
 .PHONY: sync-rbac
 sync-rbac:
