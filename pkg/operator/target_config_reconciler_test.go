@@ -728,6 +728,46 @@ func TestManageResources(t *testing.T) {
 			},
 		},
 		{
+			resourceType: "Role",
+			resourceName: "secondary-scheduler-operand",
+			manageFunc:   (*TargetConfigReconciler).manageOperandRole,
+			getResource: func(ctx context.Context, setup *testSetup, name string) (metav1.Object, error) {
+				return setup.kubeClient.RbacV1().Roles(operatorclient.OperatorNamespace).Get(ctx, name, metav1.GetOptions{})
+			},
+			updateResource: func(ctx context.Context, setup *testSetup, obj metav1.Object) error {
+				_, err := setup.kubeClient.RbacV1().Roles(operatorclient.OperatorNamespace).Update(ctx, obj.(*rbacv1.Role), metav1.UpdateOptions{})
+				return err
+			},
+			modifyResource: func(t *testing.T, obj metav1.Object) {
+				obj.(*rbacv1.Role).Rules[0].Verbs = []string{"create", "delete"}
+			},
+			verifyRestore: func(t *testing.T, obj metav1.Object) {
+				if diff := cmp.Diff([]string{"get", "list", "watch", "create", "update", "patch"}, obj.(*rbacv1.Role).Rules[0].Verbs); diff != "" {
+					t.Errorf("Expected verbs to be restored, diff (-want +got):\n%s", diff)
+				}
+			},
+		},
+		{
+			resourceType: "RoleBinding",
+			resourceName: "secondary-scheduler-operand",
+			manageFunc:   (*TargetConfigReconciler).manageOperandRoleBinding,
+			getResource: func(ctx context.Context, setup *testSetup, name string) (metav1.Object, error) {
+				return setup.kubeClient.RbacV1().RoleBindings(operatorclient.OperatorNamespace).Get(ctx, name, metav1.GetOptions{})
+			},
+			updateResource: func(ctx context.Context, setup *testSetup, obj metav1.Object) error {
+				_, err := setup.kubeClient.RbacV1().RoleBindings(operatorclient.OperatorNamespace).Update(ctx, obj.(*rbacv1.RoleBinding), metav1.UpdateOptions{})
+				return err
+			},
+			modifyResource: func(t *testing.T, obj metav1.Object) {
+				obj.(*rbacv1.RoleBinding).Subjects[0].Name = "wrong-serviceaccount"
+			},
+			verifyRestore: func(t *testing.T, obj metav1.Object) {
+				if obj.(*rbacv1.RoleBinding).Subjects[0].Name != "secondary-scheduler" {
+					t.Errorf("Expected subject name to be restored to %q, got %q", "secondary-scheduler", obj.(*rbacv1.RoleBinding).Subjects[0].Name)
+				}
+			},
+		},
+		{
 			resourceType:        "ClusterRoleBinding",
 			resourceName:        kubeSchedulerClusterRoleBindingName,
 			skipNamespaceVerify: true,
@@ -975,6 +1015,16 @@ func TestSync(t *testing.T) {
 			t.Errorf("Expected RoleBinding to not exist (NotFound error), got: %v", err)
 		}
 
+		_, err = setup.kubeClient.RbacV1().Roles(operatorclient.OperatorNamespace).Get(ctx, "secondary-scheduler-operand", metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
+			t.Errorf("Expected Operand Role to not exist (NotFound error), got: %v", err)
+		}
+
+		_, err = setup.kubeClient.RbacV1().RoleBindings(operatorclient.OperatorNamespace).Get(ctx, "secondary-scheduler-operand", metav1.GetOptions{})
+		if !apierrors.IsNotFound(err) {
+			t.Errorf("Expected Operand RoleBinding to not exist (NotFound error), got: %v", err)
+		}
+
 		_, err = setup.kubeClient.AppsV1().Deployments(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperandName, metav1.GetOptions{})
 		if !apierrors.IsNotFound(err) {
 			t.Errorf("Expected Deployment to not exist (NotFound error), got: %v", err)
@@ -1033,6 +1083,22 @@ func TestSync(t *testing.T) {
 			verifyOwnerReference(t, roleBinding)
 		}
 
+		operandRole, err := setup.kubeClient.RbacV1().Roles(operatorclient.OperatorNamespace).Get(ctx, "secondary-scheduler-operand", metav1.GetOptions{})
+		if err != nil {
+			t.Errorf("Failed to get Operand Role after sync: %v", err)
+		} else {
+			verifyNamespace(t, operandRole)
+			verifyOwnerReference(t, operandRole)
+		}
+
+		operandRoleBinding, err := setup.kubeClient.RbacV1().RoleBindings(operatorclient.OperatorNamespace).Get(ctx, "secondary-scheduler-operand", metav1.GetOptions{})
+		if err != nil {
+			t.Errorf("Failed to get Operand RoleBinding after sync: %v", err)
+		} else {
+			verifyNamespace(t, operandRoleBinding)
+			verifyOwnerReference(t, operandRoleBinding)
+		}
+
 		deployment, err := setup.kubeClient.AppsV1().Deployments(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperandName, metav1.GetOptions{})
 		if err != nil {
 			t.Errorf("Failed to get Deployment after sync: %v", err)
@@ -1059,6 +1125,8 @@ func TestSync(t *testing.T) {
 					"services/metrics",
 					"roles/prometheus-k8s",
 					"rolebindings/prometheus-k8s",
+					"roles/secondary-scheduler-operand",
+					"rolebindings/secondary-scheduler-operand",
 					"servicemonitors/secondary-scheduler",
 				}
 
@@ -1223,10 +1291,12 @@ func TestSyncResourceVersionAnnotations(t *testing.T) {
 				"serviceaccounts/secondary-scheduler":                          tc.resourceVersion,
 				"clusterrolebindings/" + kubeSchedulerClusterRoleBindingName:   tc.resourceVersion,
 				"clusterrolebindings/" + volumeSchedulerClusterRoleBindingName: tc.resourceVersion,
-				"services/metrics":                    tc.resourceVersion,
-				"roles/prometheus-k8s":                tc.resourceVersion,
-				"rolebindings/prometheus-k8s":         tc.resourceVersion,
-				"servicemonitors/secondary-scheduler": tc.resourceVersion,
+				"services/metrics":                        tc.resourceVersion,
+				"roles/prometheus-k8s":                    tc.resourceVersion,
+				"rolebindings/prometheus-k8s":             tc.resourceVersion,
+				"roles/secondary-scheduler-operand":       tc.resourceVersion,
+				"rolebindings/secondary-scheduler-operand": tc.resourceVersion,
+				"servicemonitors/secondary-scheduler":     tc.resourceVersion,
 			}
 
 			for key, expectedValue := range expectedAnnotations {
