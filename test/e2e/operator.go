@@ -9,6 +9,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -16,6 +17,9 @@ import (
 	"k8s.io/klog/v2"
 	clocktesting "k8s.io/utils/clock/testing"
 	utilpointer "k8s.io/utils/pointer"
+	"sigs.k8s.io/yaml"
+
+	olm "github.com/operator-framework/api/pkg/operators/v1alpha1"
 
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
@@ -28,6 +32,71 @@ import (
 
 	o "github.com/onsi/gomega"
 )
+
+// extractClusterRoleFromCSV extracts the ClusterRole from CSV bytes
+func extractClusterRoleFromCSV(csvBytes []byte) (*rbacv1.ClusterRole, error) {
+	// Parse the CSV
+	var csv olm.ClusterServiceVersion
+	if err := yaml.Unmarshal(csvBytes, &csv); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal CSV: %w", err)
+	}
+
+	// Extract the first clusterPermissions rules
+	if len(csv.Spec.InstallStrategy.StrategySpec.ClusterPermissions) == 0 {
+		return nil, fmt.Errorf("no clusterPermissions found in CSV")
+	}
+
+	rules := csv.Spec.InstallStrategy.StrategySpec.ClusterPermissions[0].Rules
+
+	// Create the ClusterRole
+	clusterRole := &rbacv1.ClusterRole{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterRole",
+			APIVersion: "rbac.authorization.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "secondary-scheduler-operator",
+		},
+		Rules: rules,
+	}
+
+	return clusterRole, nil
+}
+
+// extractRoleFromCSV extracts the Role from CSV bytes
+func extractRoleFromCSV(csvBytes []byte) (*rbacv1.Role, error) {
+	// Parse the CSV
+	var csv olm.ClusterServiceVersion
+	if err := yaml.Unmarshal(csvBytes, &csv); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal CSV: %w", err)
+	}
+
+	// Extract the first permissions rules
+	if len(csv.Spec.InstallStrategy.StrategySpec.Permissions) == 0 {
+		return nil, fmt.Errorf("no permissions found in CSV")
+	}
+
+	rules := csv.Spec.InstallStrategy.StrategySpec.Permissions[0].Rules
+
+	// Create the Role
+	role := &rbacv1.Role{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Role",
+			APIVersion: "rbac.authorization.k8s.io/v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "secondary-scheduler-operator",
+			Namespace: operatorclient.OperatorNamespace,
+			Annotations: map[string]string{
+				"include.release.openshift.io/self-managed-high-availability": "true",
+				"include.release.openshift.io/single-node-developer":          "true",
+			},
+		},
+		Rules: rules,
+	}
+
+	return role, nil
+}
 
 // setupOperator sets up the operator and waits for it to be ready.
 // This function works with both standard Go testing and Ginkgo.
@@ -85,9 +154,24 @@ func setupOperator(t testing.TB) (context.Context, context.CancelFunc, *k8sclien
 			},
 		},
 		{
-			path: "assets/03_clusterrole.yaml",
+			path: "assets/cluster-secondary-scheduler-operator.clusterserviceversion.yaml",
 			readerAndApply: func(objBytes []byte) error {
-				_, _, err := resourceapply.ApplyClusterRole(ctx, kubeClient.RbacV1(), eventRecorder, resourceread.ReadClusterRoleV1OrDie(objBytes))
+				clusterRole, err := extractClusterRoleFromCSV(objBytes)
+				if err != nil {
+					return fmt.Errorf("failed to extract ClusterRole from CSV: %w", err)
+				}
+				_, _, err = resourceapply.ApplyClusterRole(ctx, kubeClient.RbacV1(), eventRecorder, clusterRole)
+				return err
+			},
+		},
+		{
+			path: "assets/cluster-secondary-scheduler-operator.clusterserviceversion.yaml",
+			readerAndApply: func(objBytes []byte) error {
+				role, err := extractRoleFromCSV(objBytes)
+				if err != nil {
+					return fmt.Errorf("failed to extract Role from CSV: %w", err)
+				}
+				_, _, err = resourceapply.ApplyRole(ctx, kubeClient.RbacV1(), eventRecorder, role)
 				return err
 			},
 		},
@@ -116,6 +200,13 @@ func setupOperator(t testing.TB) (context.Context, context.CancelFunc, *k8sclien
 			path: "assets/04_prometheus-cluster-role-binding.yaml",
 			readerAndApply: func(objBytes []byte) error {
 				_, _, err := resourceapply.ApplyClusterRoleBinding(ctx, kubeClient.RbacV1(), eventRecorder, resourceread.ReadClusterRoleBindingV1OrDie(objBytes))
+				return err
+			},
+		},
+		{
+			path: "assets/04_operatorrolebinding.yaml",
+			readerAndApply: func(objBytes []byte) error {
+				_, _, err := resourceapply.ApplyRoleBinding(ctx, kubeClient.RbacV1(), eventRecorder, resourceread.ReadRoleBindingV1OrDie(objBytes))
 				return err
 			},
 		},

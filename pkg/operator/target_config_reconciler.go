@@ -176,6 +176,14 @@ func (c TargetConfigReconciler) sync(item queueItem) error {
 			manageFunc:    c.manageRoleBinding,
 		},
 		{
+			annotationKey: "roles/secondary-scheduler-operand",
+			manageFunc:    c.manageOperandRole,
+		},
+		{
+			annotationKey: "rolebindings/secondary-scheduler-operand",
+			manageFunc:    c.manageOperandRoleBinding,
+		},
+		{
 			annotationKey: "servicemonitors/secondary-scheduler",
 			manageFunc:    c.manageServiceMonitor,
 		},
@@ -278,6 +286,40 @@ func (c *TargetConfigReconciler) manageRole(secondaryScheduler *secondaryschedul
 
 func (c *TargetConfigReconciler) manageRoleBinding(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
 	required := resourceread.ReadRoleBindingV1OrDie(bindata.MustAsset("assets/secondary-scheduler/rolebinding.yaml"))
+	required.Namespace = secondaryScheduler.Namespace
+	ownerReference := metav1.OwnerReference{
+		APIVersion: "operator.openshift.io/v1",
+		Kind:       "SecondaryScheduler",
+		Name:       secondaryScheduler.Name,
+		UID:        secondaryScheduler.UID,
+	}
+	required.OwnerReferences = []metav1.OwnerReference{
+		ownerReference,
+	}
+	controller.EnsureOwnerRef(required, ownerReference)
+
+	return resourceapply.ApplyRoleBinding(c.ctx, c.kubeClient.RbacV1(), c.eventRecorder, required)
+}
+
+func (c *TargetConfigReconciler) manageOperandRole(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
+	required := resourceread.ReadRoleV1OrDie(bindata.MustAsset("assets/secondary-scheduler/operandrole.yaml"))
+	required.Namespace = secondaryScheduler.Namespace
+	ownerReference := metav1.OwnerReference{
+		APIVersion: "operator.openshift.io/v1",
+		Kind:       "SecondaryScheduler",
+		Name:       secondaryScheduler.Name,
+		UID:        secondaryScheduler.UID,
+	}
+	required.OwnerReferences = []metav1.OwnerReference{
+		ownerReference,
+	}
+	controller.EnsureOwnerRef(required, ownerReference)
+
+	return resourceapply.ApplyRole(c.ctx, c.kubeClient.RbacV1(), c.eventRecorder, required)
+}
+
+func (c *TargetConfigReconciler) manageOperandRoleBinding(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
+	required := resourceread.ReadRoleBindingV1OrDie(bindata.MustAsset("assets/secondary-scheduler/operandrolebinding.yaml"))
 	required.Namespace = secondaryScheduler.Namespace
 	ownerReference := metav1.OwnerReference{
 		APIVersion: "operator.openshift.io/v1",
