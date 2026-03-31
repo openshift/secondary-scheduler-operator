@@ -80,4 +80,13 @@ spec:
               mountPath: "/tmp"
             - mountPath: "/certs-dir"
               name: certs-dir
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: "secondary-scheduler"
+                topologyKey: kubernetes.io/hostname
       serviceAccountName: "secondary-scheduler"
