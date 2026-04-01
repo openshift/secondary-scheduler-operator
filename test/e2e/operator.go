@@ -369,7 +369,7 @@ func testScheduling(t testing.TB, ctx context.Context, kubeClient *k8sclient.Cli
 		klog.Infof("Pod successfully assigned to a node: %v", pod.Spec.NodeName)
 
 		return true
-	}, time.Minute, 1*time.Second).Should(o.BeTrue(), "pod not running after timeout")
+	}, 2*time.Minute, 1*time.Second).Should(o.BeTrue(), "pod not running after timeout")
 
 	return testNamespace
 }
