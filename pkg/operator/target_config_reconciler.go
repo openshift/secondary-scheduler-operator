@@ -27,6 +27,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/dynamic"
@@ -176,6 +177,14 @@ func (c TargetConfigReconciler) sync(item queueItem) error {
 			manageFunc:    c.manageRoleBinding,
 		},
 		{
+			annotationKey: "roles/secondary-scheduler-operand",
+			manageFunc:    c.manageOperandRole,
+		},
+		{
+			annotationKey: "rolebindings/secondary-scheduler-operand",
+			manageFunc:    c.manageOperandRoleBinding,
+		},
+		{
 			annotationKey: "servicemonitors/secondary-scheduler",
 			manageFunc:    c.manageServiceMonitor,
 		},
@@ -278,6 +287,40 @@ func (c *TargetConfigReconciler) manageRole(secondaryScheduler *secondaryschedul
 
 func (c *TargetConfigReconciler) manageRoleBinding(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
 	required := resourceread.ReadRoleBindingV1OrDie(bindata.MustAsset("assets/secondary-scheduler/rolebinding.yaml"))
+	required.Namespace = secondaryScheduler.Namespace
+	ownerReference := metav1.OwnerReference{
+		APIVersion: "operator.openshift.io/v1",
+		Kind:       "SecondaryScheduler",
+		Name:       secondaryScheduler.Name,
+		UID:        secondaryScheduler.UID,
+	}
+	required.OwnerReferences = []metav1.OwnerReference{
+		ownerReference,
+	}
+	controller.EnsureOwnerRef(required, ownerReference)
+
+	return resourceapply.ApplyRoleBinding(c.ctx, c.kubeClient.RbacV1(), c.eventRecorder, required)
+}
+
+func (c *TargetConfigReconciler) manageOperandRole(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
+	required := resourceread.ReadRoleV1OrDie(bindata.MustAsset("assets/secondary-scheduler/operandrole.yaml"))
+	required.Namespace = secondaryScheduler.Namespace
+	ownerReference := metav1.OwnerReference{
+		APIVersion: "operator.openshift.io/v1",
+		Kind:       "SecondaryScheduler",
+		Name:       secondaryScheduler.Name,
+		UID:        secondaryScheduler.UID,
+	}
+	required.OwnerReferences = []metav1.OwnerReference{
+		ownerReference,
+	}
+	controller.EnsureOwnerRef(required, ownerReference)
+
+	return resourceapply.ApplyRole(c.ctx, c.kubeClient.RbacV1(), c.eventRecorder, required)
+}
+
+func (c *TargetConfigReconciler) manageOperandRoleBinding(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
+	required := resourceread.ReadRoleBindingV1OrDie(bindata.MustAsset("assets/secondary-scheduler/operandrolebinding.yaml"))
 	required.Namespace = secondaryScheduler.Namespace
 	ownerReference := metav1.OwnerReference{
 		APIVersion: "operator.openshift.io/v1",
@@ -405,6 +448,62 @@ func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondarys
 
 	if minTLSVersionFound && len(minTLSVersion) > 0 {
 		required.Spec.Template.Spec.Containers[0].Args = append(required.Spec.Template.Spec.Containers[0].Args, fmt.Sprintf("--tls-min-version=%s", minTLSVersion))
+	}
+
+	// Handle topology mode for HA
+	if secondaryScheduler.Spec.Topology.Mode == secondaryschedulersv1.HighlyAvailableMode {
+		var nodeSelector map[string]string
+		var maxReplicas uint32
+
+		// Apply HA topology configuration if specified
+		if secondaryScheduler.Spec.Topology.HighlyAvailableTopology != nil {
+			// Apply nodeSelector if specified
+			if secondaryScheduler.Spec.Topology.HighlyAvailableTopology.NodeSelector != nil {
+				nodeSelector = *secondaryScheduler.Spec.Topology.HighlyAvailableTopology.NodeSelector
+				required.Spec.Template.Spec.NodeSelector = nodeSelector
+			}
+
+			// Apply tolerations if specified
+			if secondaryScheduler.Spec.Topology.HighlyAvailableTopology.Tolerations != nil {
+				required.Spec.Template.Spec.Tolerations = *secondaryScheduler.Spec.Topology.HighlyAvailableTopology.Tolerations
+			}
+
+			// Get maxReplicas
+			maxReplicas = secondaryScheduler.Spec.Topology.HighlyAvailableTopology.MaxReplicas
+			if maxReplicas == 0 {
+				return nil, false, fmt.Errorf("maxReplicas must be at least 1, got 0")
+			}
+		} else {
+			// Use default when HighlyAvailableTopology is not specified
+			maxReplicas = 3
+		}
+
+		// Build label selector for listing nodes
+		labelSelector := labels.SelectorFromSet(nodeSelector).String()
+
+		// Count nodes matching the selector
+		nodes, err := c.kubeClient.CoreV1().Nodes().List(c.ctx, metav1.ListOptions{
+			LabelSelector: labelSelector,
+		})
+		if err != nil {
+			return nil, false, fmt.Errorf("failed to list nodes with selector %q: %w", labelSelector, err)
+		}
+
+		// Set replicas to the number of matching nodes
+		replicas := int32(len(nodes.Items))
+
+		// Apply maxReplicas cap
+		if replicas > int32(maxReplicas) {
+			klog.Infof("Capping replicas from %d to maxReplicas=%d for HA mode (selector: %s)", replicas, maxReplicas, labelSelector)
+			replicas = int32(maxReplicas)
+		}
+
+		if replicas > 0 {
+			required.Spec.Replicas = &replicas
+			klog.Infof("Setting replicas to %d based on node count for HA mode (selector: %s)", replicas, labelSelector)
+		} else {
+			klog.Warningf("No nodes found matching selector %q, keeping default replica count", labelSelector)
+		}
 	}
 
 	resourcemerge.MergeMap(resourcemerge.BoolPtr(false), &required.Spec.Template.Annotations, specAnnotations)

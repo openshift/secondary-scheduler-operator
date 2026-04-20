@@ -198,9 +198,83 @@ metadata:
 spec:
   schedulerConfig: secondary-scheduler-config
   schedulerImage: k8s.gcr.io/scheduler-plugins/kube-scheduler:v0.24.9
+  topology:
+    mode: SingleReplica
 ```
 
-The operator spec provides a `schedulerConfig` and a `schedulerImage` field, which allows users to specify a custom KubeSchedulerConfiguration and a custom scheduler image.
+The operator spec provides the following fields:
+- `schedulerConfig`: Name of the ConfigMap containing the custom KubeSchedulerConfiguration
+- `schedulerImage`: Container image for the custom scheduler
+- `topology`: Configuration for scheduler deployment topology (single replica or high availability)
+
+## High Availability Mode
+
+The Secondary Scheduler Operator supports running the scheduler in High Availability (HA) mode with multiple replicas distributed across nodes using pod anti-affinity.
+
+### Topology Modes
+
+The operator supports two topology modes:
+
+- **SingleReplica** (default): Runs a single instance of the secondary scheduler
+- **HighlyAvailable**: Runs multiple instances with pod anti-affinity to distribute them across nodes
+
+### Configuring HA Mode
+
+To enable HA mode, set the `topology.mode` field to `HighlyAvailable`:
+
+```yaml
+apiVersion: operator.openshift.io/v1
+kind: SecondaryScheduler
+metadata:
+  name: cluster
+  namespace: openshift-secondary-scheduler-operator
+spec:
+  schedulerConfig: secondary-scheduler-config
+  schedulerImage: k8s.gcr.io/scheduler-plugins/kube-scheduler:v0.24.9
+  topology:
+    mode: HighlyAvailable
+    highlyAvailableTopology:
+      maxReplicas: 3
+```
+
+### HA Configuration Options
+
+The `highlyAvailableTopology` field supports the following options:
+
+- **maxReplicas** (default: 3): Maximum number of scheduler replicas. The actual number of replicas is determined by the number of nodes matching the nodeSelector, capped at maxReplicas.
+
+- **nodeSelector** (optional): Target specific nodes for scheduler placement. If unspecified, all nodes are considered.
+  ```yaml
+  topology:
+    mode: HighlyAvailable
+    highlyAvailableTopology:
+      maxReplicas: 3
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+  ```
+
+- **tolerations** (optional): Allow scheduling on nodes with specific taints.
+  ```yaml
+  topology:
+    mode: HighlyAvailable
+    highlyAvailableTopology:
+      maxReplicas: 3
+      tolerations:
+        - key: "dedicated"
+          operator: "Equal"
+          value: "scheduler"
+          effect: "NoSchedule"
+  ```
+
+### Pod Anti-Affinity
+
+When HA mode is enabled, the operator automatically configures soft pod anti-affinity (preferredDuringSchedulingIgnoredDuringExecution) to distribute scheduler instances across different nodes:
+
+- **Weight**: 100
+- **TopologyKey**: `kubernetes.io/hostname`
+- **Label Selector**: `app=secondary-scheduler`
+
+This ensures that scheduler instances prefer to run on different nodes for improved availability, while still allowing multiple instances on the same node if necessary (e.g., during updates).
 
 ## Tests
 

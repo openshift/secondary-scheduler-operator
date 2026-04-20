@@ -24,10 +24,16 @@ import (
 
 // SecondarySchedulerSpecApplyConfiguration represents a declarative configuration of the SecondarySchedulerSpec type for use
 // with apply.
+//
+// SecondarySchedulerSpec defines the desired state of SecondaryScheduler
 type SecondarySchedulerSpecApplyConfiguration struct {
 	operatorv1.OperatorSpecApplyConfiguration `json:",inline"`
-	SchedulerConfig                           *string `json:"schedulerConfig,omitempty"`
-	SchedulerImage                            *string `json:"schedulerImage,omitempty"`
+	// SchedulerConfig allows configuring the customized scheduler plugin configuration for the secondaryscheduler.
+	SchedulerConfig *string `json:"schedulerConfig,omitempty"`
+	// SchedulerImage sets the container image url to be pulled for the custom scheduler that's deployed
+	SchedulerImage *string `json:"schedulerImage,omitempty"`
+	// topology defines scheduling constraints for the secondary scheduler instances
+	Topology *TopologyApplyConfiguration `json:"topology,omitempty"`
 }
 
 // SecondarySchedulerSpecApplyConfiguration constructs a declarative configuration of the SecondarySchedulerSpec type for use with
@@ -89,5 +95,13 @@ func (b *SecondarySchedulerSpecApplyConfiguration) WithSchedulerConfig(value str
 // If called multiple times, the SchedulerImage field is set to the value of the last call.
 func (b *SecondarySchedulerSpecApplyConfiguration) WithSchedulerImage(value string) *SecondarySchedulerSpecApplyConfiguration {
 	b.SchedulerImage = &value
+	return b
+}
+
+// WithTopology sets the Topology field in the declarative configuration to the given value
+// and returns the receiver, so that objects can be built by chaining "With" function invocations.
+// If called multiple times, the Topology field is set to the value of the last call.
+func (b *SecondarySchedulerSpecApplyConfiguration) WithTopology(value *TopologyApplyConfiguration) *SecondarySchedulerSpecApplyConfiguration {
+	b.Topology = value
 	return b
 }

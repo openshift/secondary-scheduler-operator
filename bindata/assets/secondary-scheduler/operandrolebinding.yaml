@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: secondary-scheduler-operand
+  namespace: openshift-secondary-scheduler-operator
+  annotations:
+    include.release.openshift.io/self-managed-high-availability: "true"
+    include.release.openshift.io/single-node-developer: "true"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: secondary-scheduler-operand
+subjects:
+- kind: ServiceAccount
+  name: secondary-scheduler
+  namespace: openshift-secondary-scheduler-operator

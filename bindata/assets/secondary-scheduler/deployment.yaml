@@ -43,6 +43,13 @@ spec:
             - --config=/etc/kubernetes/config.yaml
             - --tls-cert-file=/certs-dir/tls.crt
             - --tls-private-key-file=/certs-dir/tls.key
+            - --leader-elect=true
+            - --leader-elect-lease-duration=137s
+            - --leader-elect-renew-deadline=107s
+            - --leader-elect-resource-lock=leases
+            - --leader-elect-resource-name=secondary-scheduler
+            - --leader-elect-resource-namespace=openshift-secondary-scheduler-operator
+            - --leader-elect-retry-period=26s
           env:
           - name: ENABLE_OPENSHIFT_AUTH
             value: "true"
@@ -73,4 +80,13 @@ spec:
               mountPath: "/tmp"
             - mountPath: "/certs-dir"
               name: certs-dir
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: "secondary-scheduler"
+                topologyKey: kubernetes.io/hostname
       serviceAccountName: "secondary-scheduler"
