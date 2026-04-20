@@ -10,7 +10,7 @@ ARG REPLACED_OPERATOR_IMG=registry-proxy.engineering.redhat.com/rh-osbs/secondar
 
 RUN hack/replace-image.sh manifests ${REPLACED_OPERATOR_IMG} ${OPERATOR_IMAGE}
 
-FROM registry.access.redhat.com/ubi9/ubi-minimal:latest@sha256:fe688da81a696387ca53a4c19231e99289591f990c904ef913c51b6e87d4e4df
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest@sha256:175bafd5bc7893540ed6234bb979acfe3574fd6570e6762bbc527c757f854cea
 
 COPY --from=builder /go/src/github.com/openshift/secondary-scheduler-operator/manifests /manifests
 COPY --from=builder /go/src/github.com/openshift/secondary-scheduler-operator/metadata /metadata
