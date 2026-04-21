@@ -27,11 +27,15 @@ import (
 
 // SecondarySchedulerApplyConfiguration represents a declarative configuration of the SecondaryScheduler type for use
 // with apply.
+//
+// SecondaryScheduler is the Schema for the secondaryscheduler API
 type SecondarySchedulerApplyConfiguration struct {
 	metav1.TypeMetaApplyConfiguration    `json:",inline"`
 	*metav1.ObjectMetaApplyConfiguration `json:"metadata,omitempty"`
-	Spec                                 *SecondarySchedulerSpecApplyConfiguration   `json:"spec,omitempty"`
-	Status                               *SecondarySchedulerStatusApplyConfiguration `json:"status,omitempty"`
+	// spec holds user settable values for configuration
+	Spec *SecondarySchedulerSpecApplyConfiguration `json:"spec,omitempty"`
+	// status holds observed values from the cluster. They may not be overridden.
+	Status *SecondarySchedulerStatusApplyConfiguration `json:"status,omitempty"`
 }
 
 // SecondaryScheduler constructs a declarative configuration of the SecondaryScheduler type for use with
@@ -45,29 +49,14 @@ func SecondaryScheduler(name, namespace string) *SecondarySchedulerApplyConfigur
 	return b
 }
 
-// ExtractSecondaryScheduler extracts the applied configuration owned by fieldManager from
-// secondaryScheduler. If no managedFields are found in secondaryScheduler for fieldManager, a
-// SecondarySchedulerApplyConfiguration is returned with only the Name, Namespace (if applicable),
-// APIVersion and Kind populated. It is possible that no managed fields were found for because other
-// field managers have taken ownership of all the fields previously owned by fieldManager, or because
-// the fieldManager never owned fields any fields.
+// ExtractSecondarySchedulerFrom extracts the applied configuration owned by fieldManager from
+// secondaryScheduler for the specified subresource. Pass an empty string for subresource to extract
+// the main resource. Common subresources include "status", "scale", etc.
 // secondaryScheduler must be a unmodified SecondaryScheduler API object that was retrieved from the Kubernetes API.
-// ExtractSecondaryScheduler provides a way to perform a extract/modify-in-place/apply workflow.
+// ExtractSecondarySchedulerFrom provides a way to perform a extract/modify-in-place/apply workflow.
 // Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
 // applied if another fieldManager has updated or force applied any of the previously applied fields.
-// Experimental!
-func ExtractSecondaryScheduler(secondaryScheduler *secondaryschedulerv1.SecondaryScheduler, fieldManager string) (*SecondarySchedulerApplyConfiguration, error) {
-	return extractSecondaryScheduler(secondaryScheduler, fieldManager, "")
-}
-
-// ExtractSecondarySchedulerStatus is the same as ExtractSecondaryScheduler except
-// that it extracts the status subresource applied configuration.
-// Experimental!
-func ExtractSecondarySchedulerStatus(secondaryScheduler *secondaryschedulerv1.SecondaryScheduler, fieldManager string) (*SecondarySchedulerApplyConfiguration, error) {
-	return extractSecondaryScheduler(secondaryScheduler, fieldManager, "status")
-}
-
-func extractSecondaryScheduler(secondaryScheduler *secondaryschedulerv1.SecondaryScheduler, fieldManager string, subresource string) (*SecondarySchedulerApplyConfiguration, error) {
+func ExtractSecondarySchedulerFrom(secondaryScheduler *secondaryschedulerv1.SecondaryScheduler, fieldManager string, subresource string) (*SecondarySchedulerApplyConfiguration, error) {
 	b := &SecondarySchedulerApplyConfiguration{}
 	err := managedfields.ExtractInto(secondaryScheduler, internal.Parser().Type("com.github.openshift.secondary-scheduler-operator.pkg.apis.secondaryscheduler.v1.SecondaryScheduler"), fieldManager, b, subresource)
 	if err != nil {
@@ -80,6 +69,27 @@ func extractSecondaryScheduler(secondaryScheduler *secondaryschedulerv1.Secondar
 	b.WithAPIVersion("operator.openshift.io/v1")
 	return b, nil
 }
+
+// ExtractSecondaryScheduler extracts the applied configuration owned by fieldManager from
+// secondaryScheduler. If no managedFields are found in secondaryScheduler for fieldManager, a
+// SecondarySchedulerApplyConfiguration is returned with only the Name, Namespace (if applicable),
+// APIVersion and Kind populated. It is possible that no managed fields were found for because other
+// field managers have taken ownership of all the fields previously owned by fieldManager, or because
+// the fieldManager never owned fields any fields.
+// secondaryScheduler must be a unmodified SecondaryScheduler API object that was retrieved from the Kubernetes API.
+// ExtractSecondaryScheduler provides a way to perform a extract/modify-in-place/apply workflow.
+// Note that an extracted apply configuration will contain fewer fields than what the fieldManager previously
+// applied if another fieldManager has updated or force applied any of the previously applied fields.
+func ExtractSecondaryScheduler(secondaryScheduler *secondaryschedulerv1.SecondaryScheduler, fieldManager string) (*SecondarySchedulerApplyConfiguration, error) {
+	return ExtractSecondarySchedulerFrom(secondaryScheduler, fieldManager, "")
+}
+
+// ExtractSecondarySchedulerStatus extracts the applied configuration owned by fieldManager from
+// secondaryScheduler for the status subresource.
+func ExtractSecondarySchedulerStatus(secondaryScheduler *secondaryschedulerv1.SecondaryScheduler, fieldManager string) (*SecondarySchedulerApplyConfiguration, error) {
+	return ExtractSecondarySchedulerFrom(secondaryScheduler, fieldManager, "status")
+}
+
 func (b SecondarySchedulerApplyConfiguration) IsApplyConfiguration() {}
 
 // WithKind sets the Kind field in the declarative configuration to the given value

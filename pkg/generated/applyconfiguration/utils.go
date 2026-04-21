@@ -30,12 +30,16 @@ import (
 func ForKind(kind schema.GroupVersionKind) interface{} {
 	switch kind {
 	// Group=operator.openshift.io, Version=v1
+	case v1.SchemeGroupVersion.WithKind("HighlyAvailableTopology"):
+		return &secondaryschedulerv1.HighlyAvailableTopologyApplyConfiguration{}
 	case v1.SchemeGroupVersion.WithKind("SecondaryScheduler"):
 		return &secondaryschedulerv1.SecondarySchedulerApplyConfiguration{}
 	case v1.SchemeGroupVersion.WithKind("SecondarySchedulerSpec"):
 		return &secondaryschedulerv1.SecondarySchedulerSpecApplyConfiguration{}
 	case v1.SchemeGroupVersion.WithKind("SecondarySchedulerStatus"):
 		return &secondaryschedulerv1.SecondarySchedulerStatusApplyConfiguration{}
+	case v1.SchemeGroupVersion.WithKind("Topology"):
+		return &secondaryschedulerv1.TopologyApplyConfiguration{}
 
 	}
 	return nil
