@@ -7,14 +7,13 @@ To initiliaze catalog-template.json
 ```sh
 $ opm migrate registry.redhat.io/redhat/redhat-operator-index:v4.14 ./catalog-migrate
 $ mkdir -p v4.14/catalog/openshift-secondary-scheduler-operator
-$ opm alpha convert-template basic ./catalog-migrate/openshift-secondary-scheduler-operator/catalog.json > v4.14/catalog-template.json
+$ opm alpha convert-template basic -o yaml ./catalog-migrate/openshift-secondary-scheduler-operator/catalog.json > v4.14/catalog-template.yaml
 ```
 
 To update the catalog
 
 ```
-$ cd v4.14
-$ opm alpha render-template basic catalog-template.json > catalog/openshift-secondary-scheduler-operator/catalog.json
+$ opm alpha render-template basic v4.14/catalog-template.yaml > v4.14/catalog/openshift-secondary-scheduler-operator/catalog.json
 ```
 
 ## Releases
