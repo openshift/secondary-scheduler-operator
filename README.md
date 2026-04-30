@@ -2,9 +2,18 @@
 
 ## FBC catalog rendering
 
+To initiliaze catalog-template.json
+
+```sh
+$ opm migrate registry.redhat.io/redhat/redhat-operator-index:v4.16 ./catalog-migrate
+$ mkdir -p v4.16/catalog/openshift-secondary-scheduler-operator
+$ opm alpha convert-template basic -o yaml ./catalog-migrate/openshift-secondary-scheduler-operator/catalog.json > v4.16/catalog-template.yaml
 ```
-$ cd v4.16
-$ opm alpha render-template basic catalog-template.json > catalog/openshift-secondary-scheduler-operator/catalog.json
+
+To update the catalog
+
+```
+$ opm alpha render-template basic v4.16/catalog-template.yaml > v4.16/catalog/openshift-secondary-scheduler-operator/catalog.json
 ```
 
 ## Releases
