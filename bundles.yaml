@@ -1,5 +1,8 @@
 name: registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle
+csvname: secondaryscheduleroperator
 bundles:
+  - release: 1.6.0
+    sha256: 121058d89f5a6884b84b1fc1fde1b4502a83ee20ce02d54f14d3d39a3391e02b
   - release: 1.5.1
     sha256: 36bbb89de21a2a8e6f024bf0299af955449eda266ee79fa81c6fa5abba8f3772
   - release: 1.5.0
@@ -49,6 +52,10 @@ bundles:
   - release: 1.1.0
     sha256: af3c5d26694a45eacef9dd65363c73466bb1c504ce6d7390c6c8301c1a6b5593
 releases:
+  - operator: "1.6"
+    ocp:
+      - "4.23"
+      - "4.22"
   - operator: "1.5"
     ocp:
       - "4.21"
