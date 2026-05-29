@@ -1,0 +1,25 @@
+config:
+  configVersion: 6
+  googleCloudStorage:
+    keyFile: "/etc/gcs/sa-key"
+    bucketName: "secaut-bucket"
+    directory: "osso/${OSSO_VERSION}"
+
+application:
+  shortName: "osso"
+  url: "https://kubernetes.default.svc"
+
+general:
+  container:
+    type: "none"
+
+scanners:
+  generic_oobtkube:
+    results: "/opt/rapidast/results/oobtkube-results.sarif"
+    inline: |
+      python3.12 oobtkube.py --find-all --log-level debug -d 300 -p 6000 -i ${POD_IP} -f /opt/rapidast/config/osso-cr.yaml -o /opt/rapidast/results/oobtkube-results.sarif
+
+  generic_trivy:
+    results: "/opt/rapidast/results/trivy-results.json"
+    inline: |
+      trivy k8s --include-namespaces openshift-secondary-scheduler-operator --scanners=misconfig --severity HIGH,CRITICAL --report all --format json --output /opt/rapidast/results/trivy-results.json --skip-check-update

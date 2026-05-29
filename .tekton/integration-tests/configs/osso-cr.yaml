@@ -1,0 +1,20 @@
+apiVersion: operator.openshift.io/v1
+kind: SecondaryScheduler
+metadata:
+  name: cluster
+  namespace: openshift-secondary-scheduler-operator
+spec:
+  managementState: Managed
+  logLevel: "Debug"
+  operatorLogLevel: "Debug"
+  schedulerConfig: "secondary-scheduler-config"
+  schedulerImage: "registry.k8s.io/scheduler-plugins/kube-scheduler:v0.33.5"
+  topology:
+    highlyAvailableTopology:
+      maxReplicas: 3
+      nodeSelector:
+        node-role.kubernetes.io/worker: ""
+      tolerations:
+        - key: "node-role.kubernetes.io/master"
+          operator: "Exists"
+          effect: "NoSchedule"
