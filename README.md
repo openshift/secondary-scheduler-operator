@@ -290,12 +290,14 @@ make build
 ### Running test suites and tests
 
 ```bash
-# Run a specific test suite or test
-./secondary-scheduler-operator-tests-ext run-suite openshift/secondary-scheduler-operator/all
+# Run the operator/serial test suite
+./secondary-scheduler-operator-tests-ext run-suite openshift/secondary-scheduler-operator/operator/serial
+
+# Run a specific test
 ./secondary-scheduler-operator-tests-ext run-test "test-name"
 
 # Run with JUnit output
-./secondary-scheduler-operator-tests-ext run-suite openshift/secondary-scheduler-operator/all --junit-path /tmp/junit.xml
+./secondary-scheduler-operator-tests-ext run-suite openshift/secondary-scheduler-operator/operator/serial --junit-path /tmp/junit.xml
 ```
 
 ### Listing available tests and suites
@@ -304,8 +306,8 @@ make build
 # List all test suites
 ./secondary-scheduler-operator-tests-ext list suites
 
-# List tests in a suite
-./secondary-scheduler-operator-tests-ext list tests --suite=openshift/secondary-scheduler-operator/all
+# List all tests
+./secondary-scheduler-operator-tests-ext list tests
 ```
 
 For more information about the OTE framework, see the [openshift-tests-extension documentation](https://github.com/openshift-eng/openshift-tests-extension).
