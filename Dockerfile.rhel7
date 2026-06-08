@@ -2,10 +2,12 @@ FROM registry.ci.openshift.org/ocp/builder:rhel-9-golang-1.25-openshift-4.22 AS 
 WORKDIR /go/src/github.com/openshift/secondary-scheduler-operator
 COPY . .
 
-RUN make build
+RUN make build --warn-undefined-variables \
+    && gzip secondary-scheduler-operator-tests-ext
 
 FROM registry.ci.openshift.org/ocp/4.22:base-rhel9
 COPY --from=builder /go/src/github.com/openshift/secondary-scheduler-operator/secondary-scheduler-operator /usr/bin/
+COPY --from=builder /go/src/github.com/openshift/secondary-scheduler-operator/secondary-scheduler-operator-tests-ext.gz /usr/bin/
 # Upstream bundle and index images does not support versioning so
 # we need to copy a specific version under /manifests layout directly
 COPY --from=builder /go/src/github.com/openshift/secondary-scheduler-operator/manifests/* /manifests/

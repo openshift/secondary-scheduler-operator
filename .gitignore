@@ -16,3 +16,7 @@
 
 # _output
 _output
+
+# OTE test binaries
+/secondary-scheduler-operator-tests-ext
+/secondary-scheduler-operator-tests-ext.gz
