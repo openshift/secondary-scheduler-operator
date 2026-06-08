@@ -143,7 +143,7 @@ spec:
     # Task 4: install-osso-operator (from SNAPSHOT bundle via operator-sdk)
     # ──────────────────────────────────────────────────────────────────────────
     - name: install-osso-operator
-      timeout: "5m"
+      timeout: "10m"
       runAfter:
         - provision-cluster
       when:
