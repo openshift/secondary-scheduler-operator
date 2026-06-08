@@ -8,6 +8,11 @@ import (
 	"testing"
 	"time"
 
+	g "github.com/onsi/ginkgo/v2"
+	o "github.com/onsi/gomega"
+	olm "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -19,8 +24,6 @@ import (
 	utilpointer "k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 
-	olm "github.com/operator-framework/api/pkg/operators/v1alpha1"
-
 	"github.com/openshift/library-go/pkg/operator/events"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resource/resourceread"
@@ -29,8 +32,6 @@ import (
 	secondaryschedulerscheme "github.com/openshift/secondary-scheduler-operator/pkg/generated/clientset/versioned/scheme"
 	"github.com/openshift/secondary-scheduler-operator/pkg/operator/operatorclient"
 	"github.com/openshift/secondary-scheduler-operator/test/e2e/bindata"
-
-	o "github.com/onsi/gomega"
 )
 
 // extractClusterRoleFromCSV extracts the ClusterRole from CSV bytes
@@ -573,3 +574,76 @@ func testMetricsDataAvailable(t testing.TB, ctx context.Context, kubeClient *k8s
 
 	klog.Infof("Metrics data verified successfully")
 }
+
+// Ginkgo test specs for OTE framework - calls the shared test functions
+var _ = g.Describe("[sig-scheduling][Operator][Serial] SecondaryScheduler Operator", g.Ordered, func() {
+	var (
+		ctx           context.Context
+		cancelFnc     context.CancelFunc
+		kubeClient    *k8sclient.Clientset
+		testNamespace string
+	)
+
+	g.BeforeAll(func() {
+		g.By("Setting up the operator")
+		var err error
+		ctx, cancelFnc, kubeClient, err = setupOperator(g.GinkgoTB())
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
+
+	g.AfterAll(func() {
+		if cancelFnc != nil {
+			cancelFnc()
+		}
+	})
+
+	g.Context("when secondary scheduler is deployed", func() {
+		g.It("should schedule a pod using the secondary scheduler", func() {
+			testNamespace = testScheduling(g.GinkgoTB(), ctx, kubeClient)
+			g.DeferCleanup(func() {
+				cleanupTestNamespace(g.GinkgoTB(), ctx, kubeClient, testNamespace)
+			})
+		})
+	})
+
+	g.Describe("Observability", g.Ordered, func() {
+		var (
+			metricsService *corev1.Service
+			serviceMonitor *monitoringv1.ServiceMonitor
+			deployment     *appsv1.Deployment
+			metricsPort    corev1.ServicePort
+			podLabels      map[string]string
+		)
+
+		g.BeforeAll(func() {
+			// Get expected resources from bindata
+			metricsService = getMetricsService()
+			serviceMonitor = getServiceMonitor()
+			deployment = getSecondarySchedulerDeployment()
+
+			// Extract pod labels from deployment spec and validate there's exactly one label selector
+			podLabels = deployment.Spec.Template.Labels
+			o.Expect(podLabels).To(o.HaveLen(1), "Expected exactly one label selector for secondary-scheduler pods")
+
+			// Get the metrics port (must be exactly one port)
+			o.Expect(metricsService.Spec.Ports).To(o.HaveLen(1), "Expected exactly one port in metrics service")
+			metricsPort = metricsService.Spec.Ports[0]
+		})
+
+		g.It("should have a metrics service", func() {
+			testMetricsServiceExists(g.GinkgoTB(), ctx, kubeClient, metricsService.Name, metricsService.Labels, metricsPort)
+		})
+
+		g.It("should have a ServiceMonitor", func() {
+			testServiceMonitorExists(g.GinkgoTB(), ctx, kubeClient, serviceMonitor.Name, metricsService.Labels)
+		})
+
+		g.It("should have Prometheus target up", func() {
+			testPrometheusTargetUp(g.GinkgoTB(), ctx, kubeClient, serviceMonitor.Name, metricsService.Name, metricsService.Labels, metricsPort, podLabels)
+		})
+
+		g.It("should have metrics data available", func() {
+			testMetricsDataAvailable(g.GinkgoTB(), ctx, kubeClient, podLabels)
+		})
+	})
+})
