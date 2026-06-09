@@ -248,6 +248,8 @@ spec:
                 name: secondary-scheduler-operator
             template:
               metadata:
+                annotations:
+                  openshift.io/required-scc: restricted-v2
                 labels:
                   name: secondary-scheduler-operator
               spec:
@@ -263,6 +265,7 @@ spec:
                       capabilities:
                         drop: ["ALL"]
                     image: registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-rhel9-operator:latest
+                    terminationMessagePolicy: FallbackToLogsOnError
                     resources:
                       requests:
                         memory: 50Mi
