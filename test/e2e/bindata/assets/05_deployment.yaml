@@ -10,6 +10,8 @@ spec:
       name: secondary-scheduler-operator
   template:
     metadata:
+      annotations:
+        openshift.io/required-scc: restricted-v2
       labels:
         name: secondary-scheduler-operator
     spec:
@@ -25,6 +27,7 @@ spec:
             capabilities:
               drop: ["ALL"]
           image: # Value set in e2e
+          terminationMessagePolicy: FallbackToLogsOnError
           ports:
           - containerPort: 60000
             name: metrics

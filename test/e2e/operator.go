@@ -346,8 +346,8 @@ func testScheduling(t testing.TB, ctx context.Context, kubeClient *k8sclient.Cli
 					},
 				},
 				Name:            "pause",
-				ImagePullPolicy: "Always",
-				Image:           "kubernetes/pause",
+				ImagePullPolicy: "IfNotPresent",
+				Image:           "registry.k8s.io/pause:3.10",
 				Ports:           []corev1.ContainerPort{{ContainerPort: 80}},
 			}},
 		},
@@ -382,7 +382,12 @@ func cleanupTestNamespace(t testing.TB, ctx context.Context, kubeClient *k8sclie
 	}
 	klog.Infof("Cleaning up test namespace: %s", testNamespace)
 	if err := kubeClient.CoreV1().Namespaces().Delete(ctx, testNamespace, metav1.DeleteOptions{}); err != nil {
-		t.Fatalf("Failed to delete namespace %s: %v", testNamespace, err)
+		if !apierrors.IsNotFound(err) {
+			klog.Errorf("Failed to delete namespace %s: %v", testNamespace, err)
+		}
+		// Don't fail the cleanup with Fatalf - just log and continue
+		// This allows retries to work properly
+		return
 	}
 	o.Eventually(func() bool {
 		_, err := kubeClient.CoreV1().Namespaces().Get(ctx, testNamespace, metav1.GetOptions{})

@@ -12,6 +12,8 @@ spec:
       app: "secondary-scheduler"
   template:
     metadata:
+      annotations:
+        openshift.io/required-scc: restricted-v2
       labels:
         app: "secondary-scheduler"
     spec:
@@ -37,6 +39,7 @@ spec:
             capabilities:
               drop: ["ALL"]
           image: ${IMAGE}
+          terminationMessagePolicy: FallbackToLogsOnError
           command:
             - /bin/kube-scheduler
           args:
