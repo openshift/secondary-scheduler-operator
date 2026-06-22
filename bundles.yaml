@@ -2,7 +2,7 @@ name: registry.redhat.io/openshift-secondary-scheduler-operator/secondary-schedu
 csvname: secondaryscheduleroperator
 bundles:
   - release: 1.6.0
-    sha256: 121058d89f5a6884b84b1fc1fde1b4502a83ee20ce02d54f14d3d39a3391e02b
+    sha256: 5af2dc9f02c02b5f508b016c156f44515d96976c2804172d31b0b0ce2b9b7f56
   - release: 1.5.1
     sha256: 36bbb89de21a2a8e6f024bf0299af955449eda266ee79fa81c6fa5abba8f3772
   - release: 1.5.0
