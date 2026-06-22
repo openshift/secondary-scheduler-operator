@@ -99,7 +99,6 @@ spec:
                       If empty, defaults will be applied. The defaults are subject to change over time.
                     properties:
                       maxReplicas:
-                        default: 3
                         description: |-
                           maxReplicas defines the maximum number of replicas for the secondary scheduler.
                           In HA mode, the actual number of replicas is determined by the number of nodes
