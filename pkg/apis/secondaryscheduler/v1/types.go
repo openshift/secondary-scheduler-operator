@@ -83,9 +83,8 @@ type HighlyAvailableTopology struct {
 	// matching the nodeSelector, but will not exceed maxReplicas if specified.
 	// If unspecified, maxReplicas defaults to 3.
 	// The default is subject to change over time.
-	// +kubebuilder:default=3
 	// +kubebuilder:validation:Minimum=1
-	MaxReplicas uint32 `json:"maxReplicas,omitempty"`
+	MaxReplicas *uint32 `json:"maxReplicas,omitempty"`
 }
 
 // SecondarySchedulerStatus defines the observed state of SecondaryScheduler

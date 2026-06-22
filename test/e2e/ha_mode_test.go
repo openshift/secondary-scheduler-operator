@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sclient "k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
+	utilpointer "k8s.io/utils/pointer"
 
 	secondaryschedulerv1 "github.com/openshift/secondary-scheduler-operator/pkg/apis/secondaryscheduler/v1"
 	secondaryschedulerclient "github.com/openshift/secondary-scheduler-operator/pkg/generated/clientset/versioned"
@@ -114,7 +115,7 @@ func testHAModeToggle(t testing.TB, ctx context.Context, kubeClient *k8sclient.C
 	ss.Spec.Topology.Mode = secondaryschedulerv1.HighlyAvailableMode
 	// Initialize HighlyAvailableTopology and set MaxReplicas to 3
 	ss.Spec.Topology.HighlyAvailableTopology = &secondaryschedulerv1.HighlyAvailableTopology{
-		MaxReplicas: 3,
+		MaxReplicas: utilpointer.Uint32Ptr(3),
 	}
 
 	_, err = secondarySchedulerClient.SecondaryschedulersV1().SecondarySchedulers(operatorclient.OperatorNamespace).

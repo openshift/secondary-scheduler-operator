@@ -40,6 +40,7 @@ import (
 	kubetesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
+	utilpointer "k8s.io/utils/pointer"
 )
 
 const (
@@ -741,7 +742,7 @@ func TestManageDeployment_Topology(t *testing.T) {
 						obj.Spec.Topology.HighlyAvailableTopology.Tolerations = &tt.tolerations
 					}
 					// Always set maxReplicas in HA mode (even if 0 for validation testing)
-					obj.Spec.Topology.HighlyAvailableTopology.MaxReplicas = tt.maxReplicas
+					obj.Spec.Topology.HighlyAvailableTopology.MaxReplicas = utilpointer.Uint32(tt.maxReplicas)
 				}
 			}), coreObjects)
 
