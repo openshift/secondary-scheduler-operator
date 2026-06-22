@@ -469,7 +469,11 @@ func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondarys
 			}
 
 			// Get maxReplicas
-			maxReplicas = secondaryScheduler.Spec.Topology.HighlyAvailableTopology.MaxReplicas
+			if secondaryScheduler.Spec.Topology.HighlyAvailableTopology.MaxReplicas != nil {
+				maxReplicas = *secondaryScheduler.Spec.Topology.HighlyAvailableTopology.MaxReplicas
+			} else {
+				maxReplicas = 3
+			}
 			if maxReplicas == 0 {
 				return nil, false, fmt.Errorf("maxReplicas must be at least 1, got 0")
 			}
