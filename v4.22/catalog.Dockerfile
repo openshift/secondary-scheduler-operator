@@ -2,7 +2,7 @@
 # /bin/opm (with a serve subcommand) and /bin/grpc_health_probe
 # FROM registry.redhat.io/openshift4/ose-operator-registry-rhel9:v4.22
 # temporarily set a sha that's fips certified
-FROM registry.redhat.io/openshift4/ose-operator-registry-rhel9:3bcabf4c5e945051ff8a04fdc0735ac43187b544e86ec6cbd49149f3b50001c8
+FROM registry.redhat.io/openshift4/ose-operator-registry-rhel9@sha256:3bcabf4c5e945051ff8a04fdc0735ac43187b544e86ec6cbd49149f3b50001c8
 
 # Configure the entrypoint and command
 ENTRYPOINT ["/bin/opm"]
