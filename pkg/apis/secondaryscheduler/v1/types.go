@@ -54,6 +54,7 @@ const (
 
 // Topology allows to configure the secondary schedulers to run in an HA mode
 // +kubebuilder:validation:XValidation:rule="self.mode == 'HighlyAvailable' || !has(self.highlyAvailableTopology)",message="highlyAvailableTopology can only be set when mode is HighlyAvailable"
+// +kubebuilder:validation:XValidation:rule="self.mode != 'HighlyAvailable' || !has(self.highlyAvailableTopology) || !has(self.highlyAvailableTopology.maxReplicas) || self.highlyAvailableTopology.maxReplicas >= 3",message="maxReplicas must be at least 3 for HighlyAvailable mode"
 type Topology struct {
 	// mode defines the topology mode for the secondary scheduler instances.
 	// If unspecified, mode defaults to SingleReplica. The default is subject to change over time.
