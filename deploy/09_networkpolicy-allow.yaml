@@ -1,0 +1,30 @@
+# Allow all egress and metrics ingress for the secondary-scheduler-operator pod.
+#
+# Egress is needed for:
+# - DNS resolution via openshift-dns
+# - Kubernetes API server communication (address varies by cluster configuration)
+# - Creating and managing operand resources across namespaces
+#
+# Ingress is needed for:
+# - Prometheus metrics scraping on port 60000
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-all-egress-and-metrics-ingress
+  namespace: openshift-secondary-scheduler-operator
+  annotations:
+    include.release.openshift.io/self-managed-high-availability: "true"
+    include.release.openshift.io/single-node-developer: "true"
+spec:
+  podSelector:
+    matchLabels:
+      name: secondary-scheduler-operator
+  egress:
+  - {}
+  ingress:
+  - ports:
+    - protocol: TCP
+      port: 60000
+  policyTypes:
+  - Ingress
+  - Egress
