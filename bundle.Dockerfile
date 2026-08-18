@@ -1,4 +1,4 @@
-FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_9_1.25 as builder
+FROM brew.registry.redhat.io/rh-osbs/openshift-golang-builder:rhel_9_golang_1.26 as builder
 WORKDIR /go/src/github.com/openshift/secondary-scheduler-operator
 COPY . .
 
@@ -30,9 +30,9 @@ LABEL com.redhat.component="secondary-scheduler-operator-bundle-container"
 LABEL description="Secondary scheduler support for OpenShift"
 LABEL distribution-scope="public"
 LABEL name="openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle"
-LABEL cpe="cpe:/a:redhat:openshift_secondary_scheduler:1.5::el9"
-LABEL release="1.6.0"
-LABEL version="1.6.0"
+LABEL cpe="cpe:/a:redhat:openshift_secondary_scheduler:1.6::el9"
+LABEL release="1.6.1"
+LABEL version="1.6.1"
 LABEL url="https://github.com/openshift/secondary-scheduler-operator"
 LABEL vendor="Red Hat, Inc."
 LABEL summary="Secondary scheduler support for OpenShift"
@@ -41,7 +41,7 @@ LABEL io.k8s.display-name="Openshift Secondary Scheduler Operator Bundle"
 LABEL io.k8s.description="This is a bundle image for Secondary Scheduler"
 LABEL io.openshift.tags="openshift,secondary-scheduler-operator"
 LABEL com.redhat.delivery.operator.bundle=true
-LABEL com.redhat.openshift.versions="v4.20"
+LABEL com.redhat.openshift.versions="v4.22"
 LABEL com.redhat.delivery.appregistry=true
 LABEL maintainer="AOS workloads team, <aos-workloads-staff@redhat.com>"
 
