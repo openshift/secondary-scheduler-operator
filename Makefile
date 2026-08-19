@@ -5,7 +5,6 @@ all: build
 include $(addprefix ./vendor/github.com/openshift/build-machinery-go/make/, \
 	golang.mk \
 	targets/openshift/images.mk \
-	targets/openshift/codegen.mk \
 	targets/openshift/deps.mk \
 	targets/openshift/crd-schema-gen.mk \
 )
@@ -42,7 +41,7 @@ test-e2e: test-unit
 regen-crd:
 	go build -o _output/tools/bin/controller-gen ./vendor/sigs.k8s.io/controller-tools/cmd/controller-gen
 	cp manifests/secondary-scheduler-operator.crd.yaml manifests/operator.openshift.io_secondaryschedulers.yaml
-	./_output/tools/bin/controller-gen crd paths=./pkg/apis/secondaryscheduler/v1/... schemapatch:manifests=./manifests output:crd:dir=./manifests
+	./_output/tools/bin/controller-gen crd paths=./pkg/apis/secondaryscheduler/v1/... output:crd:dir=./manifests
 	mv manifests/operator.openshift.io_secondaryschedulers.yaml manifests/secondary-scheduler-operator.crd.yaml
 	cp manifests/secondary-scheduler-operator.crd.yaml test/e2e/bindata/assets/00_secondary-scheduler-operator.crd.yaml
 	cp manifests/secondary-scheduler-operator.crd.yaml deploy/00_secondary-scheduler-operator.crd.yaml
@@ -52,11 +51,14 @@ sync-rbac:
 	cp manifests/cluster-secondary-scheduler-operator.clusterserviceversion.yaml test/e2e/bindata/assets/.
 	hack/sync-rbac-from-csv.sh
 
-generate: update-codegen-crds generate-clients
+update-codegen: generate-clients
+.PHONY: update-codegen
+
+generate: update-codegen-crds update-codegen
 .PHONY: generate
 
 generate-clients:
-	GO=GO111MODULE=on GOFLAGS=-mod=readonly hack/update-codegen.sh
+	GO111MODULE=on GOFLAGS=-mod=readonly hack/update-codegen.sh
 .PHONY: generate-clients
 
 .PHONY: install-local
