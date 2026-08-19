@@ -49,6 +49,11 @@ func (in *HighlyAvailableTopology) DeepCopyInto(out *HighlyAvailableTopology) {
 			}
 		}
 	}
+	if in.MaxReplicas != nil {
+		in, out := &in.MaxReplicas, &out.MaxReplicas
+		*out = new(uint32)
+		**out = **in
+	}
 	return
 }
 
