@@ -188,6 +188,16 @@ func (c TargetConfigReconciler) sync(item queueItem) error {
 			annotationKey: "servicemonitors/secondary-scheduler",
 			manageFunc:    c.manageServiceMonitor,
 		},
+		// Network policies: apply allow rules before default-deny so that
+		// traffic is never blocked during the window between sequential applies.
+		{
+			annotationKey: "networkpolicies/operand-allow",
+			manageFunc:    c.manageNetworkPolicy,
+		},
+		{
+			annotationKey: "networkpolicies/default-deny",
+			manageFunc:    c.manageDefaultDenyNetworkPolicy,
+		},
 	}
 
 	for _, mr := range managedResources {
@@ -366,6 +376,40 @@ func (c *TargetConfigReconciler) manageServiceMonitor(secondaryScheduler *second
 	controller.EnsureOwnerRef(required, ownerReference)
 
 	return resourceapply.ApplyKnownUnstructured(c.ctx, c.dynamicClient, c.eventRecorder, required)
+}
+
+func (c *TargetConfigReconciler) manageNetworkPolicy(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
+	required := resourceread.ReadNetworkPolicyV1OrDie(bindata.MustAsset("assets/secondary-scheduler/networkpolicy-operand-allow.yaml"))
+	required.Namespace = secondaryScheduler.Namespace
+	ownerReference := metav1.OwnerReference{
+		APIVersion: "operator.openshift.io/v1",
+		Kind:       "SecondaryScheduler",
+		Name:       secondaryScheduler.Name,
+		UID:        secondaryScheduler.UID,
+	}
+	required.OwnerReferences = []metav1.OwnerReference{
+		ownerReference,
+	}
+	controller.EnsureOwnerRef(required, ownerReference)
+
+	return resourceapply.ApplyNetworkPolicy(c.ctx, c.kubeClient.NetworkingV1(), c.eventRecorder, required, resourceapply.NewResourceCache())
+}
+
+func (c *TargetConfigReconciler) manageDefaultDenyNetworkPolicy(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
+	required := resourceread.ReadNetworkPolicyV1OrDie(bindata.MustAsset("assets/secondary-scheduler/networkpolicy-operand-default-deny.yaml"))
+	required.Namespace = secondaryScheduler.Namespace
+	ownerReference := metav1.OwnerReference{
+		APIVersion: "operator.openshift.io/v1",
+		Kind:       "SecondaryScheduler",
+		Name:       secondaryScheduler.Name,
+		UID:        secondaryScheduler.UID,
+	}
+	required.OwnerReferences = []metav1.OwnerReference{
+		ownerReference,
+	}
+	controller.EnsureOwnerRef(required, ownerReference)
+
+	return resourceapply.ApplyNetworkPolicy(c.ctx, c.kubeClient.NetworkingV1(), c.eventRecorder, required, resourceapply.NewResourceCache())
 }
 
 func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler, specAnnotations map[string]string) (*appsv1.Deployment, bool, error) {

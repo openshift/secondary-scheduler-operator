@@ -65,6 +65,8 @@ generate-clients:
 install-local:
 	oc apply -f deploy/00_secondary-scheduler-operator.crd.yaml
 	oc apply -f deploy/01_namespace.yaml
+	oc apply -f deploy/08_networkpolicy-default-deny.yaml
+	oc apply -f deploy/09_networkpolicy-allow.yaml
 	oc apply -f deploy/06_configmap.yaml
 	oc apply -f deploy/07_secondary-scheduler-operator.cr.yaml
 

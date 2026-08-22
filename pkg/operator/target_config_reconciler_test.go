@@ -27,6 +27,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -165,6 +166,9 @@ func setupFakeClients(t *testing.T, apiServer *configv1.APIServer, secondarySche
 	}
 	if err := rbacv1.AddToScheme(scheme); err != nil {
 		t.Fatalf("Failed to add rbacv1 to scheme: %v", err)
+	}
+	if err := networkingv1.AddToScheme(scheme); err != nil {
+		t.Fatalf("Failed to add networkingv1 to scheme: %v", err)
 	}
 	dynamicClient := dynamicfake.NewSimpleDynamicClient(scheme)
 
@@ -1087,6 +1091,52 @@ func TestManageResources(t *testing.T) {
 			},
 		},
 		{
+			resourceType: "NetworkPolicy",
+			resourceName: "allow-all-egress-and-metrics-ingress-operand",
+			manageFunc:   (*TargetConfigReconciler).manageNetworkPolicy,
+			getResource: func(ctx context.Context, setup *testSetup, name string) (metav1.Object, error) {
+				return setup.kubeClient.NetworkingV1().NetworkPolicies(operatorclient.OperatorNamespace).Get(ctx, name, metav1.GetOptions{})
+			},
+			updateResource: func(ctx context.Context, setup *testSetup, obj metav1.Object) error {
+				_, err := setup.kubeClient.NetworkingV1().NetworkPolicies(operatorclient.OperatorNamespace).Update(ctx, obj.(*networkingv1.NetworkPolicy), metav1.UpdateOptions{})
+				return err
+			},
+			modifyResource: func(t *testing.T, obj metav1.Object) {
+				np := obj.(*networkingv1.NetworkPolicy)
+				np.Spec.PodSelector.MatchLabels["app"] = "wrong-app"
+			},
+			verifyRestore: func(t *testing.T, obj metav1.Object) {
+				np := obj.(*networkingv1.NetworkPolicy)
+				app := np.Spec.PodSelector.MatchLabels["app"]
+				if app != "secondary-scheduler" {
+					t.Errorf("Expected podSelector app to be restored to %q, got %q", "secondary-scheduler", app)
+				}
+			},
+		},
+		{
+			resourceType: "NetworkPolicy",
+			resourceName: "default-deny",
+			manageFunc:   (*TargetConfigReconciler).manageDefaultDenyNetworkPolicy,
+			getResource: func(ctx context.Context, setup *testSetup, name string) (metav1.Object, error) {
+				return setup.kubeClient.NetworkingV1().NetworkPolicies(operatorclient.OperatorNamespace).Get(ctx, name, metav1.GetOptions{})
+			},
+			updateResource: func(ctx context.Context, setup *testSetup, obj metav1.Object) error {
+				_, err := setup.kubeClient.NetworkingV1().NetworkPolicies(operatorclient.OperatorNamespace).Update(ctx, obj.(*networkingv1.NetworkPolicy), metav1.UpdateOptions{})
+				return err
+			},
+			modifyResource: func(t *testing.T, obj metav1.Object) {
+				np := obj.(*networkingv1.NetworkPolicy)
+				np.Spec.PolicyTypes = []networkingv1.PolicyType{networkingv1.PolicyTypeIngress}
+			},
+			verifyRestore: func(t *testing.T, obj metav1.Object) {
+				np := obj.(*networkingv1.NetworkPolicy)
+				expected := []networkingv1.PolicyType{networkingv1.PolicyTypeIngress, networkingv1.PolicyTypeEgress}
+				if diff := cmp.Diff(expected, np.Spec.PolicyTypes); diff != "" {
+					t.Errorf("Expected policyTypes to be restored, diff (-want +got):\n%s", diff)
+				}
+			},
+		},
+		{
 			resourceType:        "ClusterRoleBinding",
 			resourceName:        volumeSchedulerClusterRoleBindingName,
 			skipNamespaceVerify: true,
@@ -1380,6 +1430,8 @@ func TestSync(t *testing.T) {
 					"roles/secondary-scheduler-operand",
 					"rolebindings/secondary-scheduler-operand",
 					"servicemonitors/secondary-scheduler",
+					"networkpolicies/operand-allow",
+					"networkpolicies/default-deny",
 				}
 
 				for _, key := range expectedAnnotations {
@@ -1494,7 +1546,7 @@ func TestSyncResourceVersionAnnotations(t *testing.T) {
 			// Add reactors to set ResourceVersions when resources are created
 			if tc.resourceVersion != "" {
 				fakeClient := setup.kubeClient.(*kubefake.Clientset)
-				for _, resource := range []string{"serviceaccounts", "clusterrolebindings", "services", "roles", "rolebindings"} {
+				for _, resource := range []string{"serviceaccounts", "clusterrolebindings", "services", "roles", "rolebindings", "networkpolicies"} {
 					fakeClient.PrependReactor("create", resource, func(action kubetesting.Action) (handled bool, ret runtime.Object, err error) {
 						action.(kubetesting.CreateAction).GetObject().(metav1.Object).SetResourceVersion(tc.resourceVersion)
 						return false, nil, nil
@@ -1549,6 +1601,8 @@ func TestSyncResourceVersionAnnotations(t *testing.T) {
 				"roles/secondary-scheduler-operand":        tc.resourceVersion,
 				"rolebindings/secondary-scheduler-operand": tc.resourceVersion,
 				"servicemonitors/secondary-scheduler":      tc.resourceVersion,
+				"networkpolicies/operand-allow":      tc.resourceVersion,
+				"networkpolicies/default-deny":       tc.resourceVersion,
 			}
 
 			for key, expectedValue := range expectedAnnotations {
