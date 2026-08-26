@@ -284,8 +284,22 @@ spec:
                         memory: 50Mi
                         cpu: 10m
                     ports:
-                      - containerPort: 60000
-                        name: metrics
+                      - containerPort: 8443
+                        name: https
+                    livenessProbe:
+                      httpGet:
+                        scheme: HTTPS
+                        port: 8443
+                        path: /healthz
+                      initialDelaySeconds: 45
+                      timeoutSeconds: 10
+                    readinessProbe:
+                      httpGet:
+                        scheme: HTTPS
+                        port: 8443
+                        path: /healthz
+                      initialDelaySeconds: 10
+                      timeoutSeconds: 10
                     command:
                       - secondary-scheduler-operator
                     args:
@@ -301,9 +315,16 @@ spec:
                     volumeMounts:
                       - name: tmp
                         mountPath: "/tmp"
+                      - name: serving-cert
+                        mountPath: /var/run/secrets/serving-cert
+                        readOnly: true
                 serviceAccountName: secondary-scheduler-operator
                 serviceAccount: openshift-secondary-scheduler-operator
                 volumes:
                   - name: tmp
                     emptyDir: {}
+                  - name: serving-cert
+                    secret:
+                      secretName: secondary-scheduler-operator-serving-cert
+                      optional: true
     strategy: deployment
