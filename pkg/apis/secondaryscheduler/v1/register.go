@@ -16,12 +16,12 @@ var (
 	SchemeGroupVersion = schema.GroupVersion{Group: "operator.openshift.io", Version: "v1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
-	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
+	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes, RegisterDefaults)
 	AddToScheme   = SchemeBuilder.AddToScheme
 )
 
 func init() {
-	SchemeBuilder.Register(addKnownTypes)
+	SchemeBuilder.Register(addKnownTypes, RegisterDefaults)
 }
 
 // Resource takes an unqualified resource and returns a Group qualified GroupResource
