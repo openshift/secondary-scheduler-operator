@@ -65,6 +65,11 @@ generate-clients:
 install-local:
 	oc apply -f deploy/00_secondary-scheduler-operator.crd.yaml
 	oc apply -f deploy/01_namespace.yaml
+	oc apply -f deploy/02_clusterrole.yaml
+	oc apply -f deploy/03_clusterrolebinding.yaml
+	oc apply -f deploy/03_operatorrole.yaml
+	oc apply -f deploy/04_serviceaccount.yaml
+	oc apply -f deploy/04_operatorrolebinding.yaml
 	oc apply -f deploy/06_configmap.yaml
 	oc apply -f deploy/07_secondary-scheduler-operator.cr.yaml
 
