@@ -67,6 +67,11 @@ install-local:
 	oc apply -f deploy/01_namespace.yaml
 	oc apply -f deploy/10_networkpolicy-allow.yaml
 	oc apply -f deploy/11_networkpolicy-default-deny.yaml
+	oc apply -f deploy/02_clusterrole.yaml
+	oc apply -f deploy/03_clusterrolebinding.yaml
+	oc apply -f deploy/03_operatorrole.yaml
+	oc apply -f deploy/04_serviceaccount.yaml
+	oc apply -f deploy/04_operatorrolebinding.yaml
 	oc apply -f deploy/06_configmap.yaml
 	oc apply -f deploy/07_secondary-scheduler-operator.cr.yaml
 
