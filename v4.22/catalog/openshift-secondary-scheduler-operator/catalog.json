@@ -786,12 +786,12 @@
     ],
     "relatedImages": [
         {
-            "name": "secondary-scheduler-operator",
-            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator@sha256:b8614a3cec97640f1639f5cb8d44121f80b97f5b88b4ba76cc62c540241ea778"
-        },
-        {
             "name": "",
             "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:5af2dc9f02c02b5f508b016c156f44515d96976c2804172d31b0b0ce2b9b7f56"
+        },
+        {
+            "name": "secondary-scheduler-operator",
+            "image": "registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator@sha256:b8614a3cec97640f1639f5cb8d44121f80b97f5b88b4ba76cc62c540241ea778"
         }
     ]
 }
