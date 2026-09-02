@@ -3,22 +3,30 @@ csvname: secondaryscheduleroperator
 bundles:
   - release: 1.6.0
     sha256: 5af2dc9f02c02b5f508b016c156f44515d96976c2804172d31b0b0ce2b9b7f56
+  - release: 1.5.2
+    sha256: e66a4cf24977b7cc79efd42c24486af5b1772a7ebf4bab3080dbb081a8c13552
   - release: 1.5.1
     sha256: 36bbb89de21a2a8e6f024bf0299af955449eda266ee79fa81c6fa5abba8f3772
   - release: 1.5.0
     sha256: a3667f085cb4f043f342d2470471e016fd50ddd4aed83ec88365a01709bc5732
+  - release: 1.4.3
+    sha256: 1a58018b787b61adeef7b97d544226c87af86176a431cfbc1a137e2d4c04ae20
   - release: 1.4.2
     sha256: f72d7562cdaddec5d52a83c0eafd24a7e13f10edc8c3cd91c9f63ea5e53627c7
   - release: 1.4.1
     sha256: 3804fcb77893d9198527b4801e2a778bf612596c9a0b125a0f0f872b23138434
   - release: 1.4.0
     sha256: c1dca4cb4d901a4ae7798e592fad162ada2c7ab99e8062d712e5415fc2fd5d00
+  - release: 1.3.3
+    sha256: 284c781ee89e041965823776d8edfde78f589b4fe7be5a4b69c5f5949bda1c49
   - release: 1.3.2
     sha256: f74547b7a26d7da6c5a81dbf9955b8bc934e46626c3c80cd479d63b4853abc43
   - release: 1.3.1
     sha256: 082fec20563feb75173232be85f9cca2d564f7bf141a99973e3bd993ec6f6f33
   - release: 1.3.0
     sha256: 4cea92798fa738944ec3487604e0974e8403e9b31b6330981cb28f12acafed05
+  - release: 1.2.4
+    sha256: d5cf2667fd974b14d88b7add4ce05bcd00ae1a83575fe28e5ab3be0e977974d1
   - release: 1.2.3
     sha256: 41cfb2120ec1613ce78ab5eba98d9447e4ea37681db3c4939842c0ecf6cdb0f7
   - release: 1.2.2
@@ -27,6 +35,8 @@ bundles:
     sha256: 959d5567fa57212bb1d707c6cd0b67d47af4431d7b567f81bcb7e19892fdde30
   - release: 1.2.0
     sha256: 775e1822637d308859c4eff42d7b09c949610430ff27cf08d01d41e44cbac2ff
+  - release: 1.1.6
+    sha256: b6da70ab19a08be0ececf53703a10912e009e687da0107a1d00261440d8fb948
   - release: 1.1.5
     sha256: 0bd806d5f8f87b035258540549a5a400cf1b9d20d513ceb8b244b8cb589da852
   - release: 1.1.4

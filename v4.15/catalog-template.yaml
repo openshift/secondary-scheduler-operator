@@ -25,6 +25,9 @@ entries:
   - name: secondaryscheduleroperator.v1.1.5
     skipRange: '>=1.0.0 <1.1.5'
     replaces: secondaryscheduleroperator.v1.0.0
+  - name: secondaryscheduleroperator.v1.1.6
+    replaces: secondaryscheduleroperator.v1.0.0
+    skipRange: '>=1.0.0 <1.1.6'
   - name: secondaryscheduleroperator.v1.2.0
     skipRange: '>=1.1.0 <1.2.0'
     replaces: secondaryscheduleroperator.v1.1.0
@@ -37,6 +40,9 @@ entries:
   - name: secondaryscheduleroperator.v1.2.3
     replaces: secondaryscheduleroperator.v1.1.0
     skipRange: '>=1.1.0 <1.2.3'
+  - name: secondaryscheduleroperator.v1.2.4
+    replaces: secondaryscheduleroperator.v1.1.0
+    skipRange: '>=1.1.0 <1.2.4'
     skips:
     - secondaryscheduleroperator.v1.1.0
     - secondaryscheduleroperator.v1.1.1
@@ -48,6 +54,7 @@ entries:
     - secondaryscheduleroperator.v1.2.0
     - secondaryscheduleroperator.v1.2.1
     - secondaryscheduleroperator.v1.2.2
+    - secondaryscheduleroperator.v1.2.3
   name: stable
   package: openshift-secondary-scheduler-operator
   schema: olm.channel
@@ -69,6 +76,9 @@ entries:
 # secondaryscheduleroperator.v1.1.5
 - image: registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:0bd806d5f8f87b035258540549a5a400cf1b9d20d513ceb8b244b8cb589da852
   schema: olm.bundle
+# secondaryscheduleroperator.v1.1.6
+- image: registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:b6da70ab19a08be0ececf53703a10912e009e687da0107a1d00261440d8fb948
+  schema: olm.bundle
 # secondaryscheduleroperator.v1.2.0
 - image: registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:775e1822637d308859c4eff42d7b09c949610430ff27cf08d01d41e44cbac2ff
   schema: olm.bundle
@@ -80,5 +90,8 @@ entries:
   schema: olm.bundle
 # secondaryscheduleroperator.v1.2.3
 - image: registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:41cfb2120ec1613ce78ab5eba98d9447e4ea37681db3c4939842c0ecf6cdb0f7
+  schema: olm.bundle
+# secondaryscheduleroperator.v1.2.4
+- image: registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-operator-bundle@sha256:d5cf2667fd974b14d88b7add4ce05bcd00ae1a83575fe28e5ab3be0e977974d1
   schema: olm.bundle
 schema: olm.template.basic
