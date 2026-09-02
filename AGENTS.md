@@ -57,7 +57,7 @@ The operator runs four controllers, all wired in `pkg/operator/starter.go` via t
 
 **`TargetConfigReconciler`** — the main reconciliation loop. Watches `SecondaryScheduler` CR and ConfigMap changes, reconciles all operand resources from embedded YAML templates:
 
-```
+```text
 fetch CR → manage RBAC → manage Service/ServiceMonitor → manage Deployment (with template substitution)
 ```
 

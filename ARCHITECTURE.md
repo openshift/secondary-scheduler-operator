@@ -92,7 +92,7 @@ The CR must be named `cluster` and created in the `openshift-secondary-scheduler
    - Log verbosity from `spec.logLevel` (Normal=2, Debug=4, Trace=6, TraceAll=8)
    - TLS cipher suites and min TLS version from `observedConfig`
 4. In **HighlyAvailable** mode: counts matching nodes, sets replicas (capped by `maxReplicas`), applies nodeSelector and tolerations
-5. Sets OwnerReferences on all managed resources pointing to the CR
+5. Sets OwnerReferences on all managed resources pointing to the CR (see Design Decisions for garbage collection implications)
 6. Tracks resource versions as annotations on the Deployment pod template to trigger rolling updates on ConfigMap or other resource changes
 
 ## Config Observer
@@ -116,22 +116,6 @@ The CR must be named `cluster` and created in the `openshift-secondary-scheduler
 
 The Deployment template runs `/bin/kube-scheduler` with `--config`, TLS cert/key, and leader election args, using the `restricted-v2` SCC.
 
-## Build System
-
-Uses `build-machinery-go`. Key targets:
-
-| Target | Description |
-|--------|-------------|
-| `make build` | Build operator binary |
-| `make test-e2e` | Run E2E tests (requires cluster) |
-| `make regen-crd` | Regenerate CRD from Go types using `controller-gen` |
-| `make sync-rbac` | Sync RBAC from CSV to test assets |
-| `make generate` | Run all codegen (CRD schema + client generation) |
-| `make install-local` | Install CRD and deploy operator locally |
-| `make run-local` | Run operator outside the cluster for development |
-
-**Base image:** `ubi9/ubi-minimal`. **Go version:** see `go.mod`.
-
 ## Testing
 
 **Unit tests**: Co-located `*_test.go` files in `pkg/operator/`. Comprehensive coverage of the reconciler including deployment creation, idempotency, drift correction, image/configmap substitution, log level mapping, TLS configuration, topology/HA mode, resource lifecycle, and owner references.
@@ -147,28 +131,6 @@ The OTE test binary is built alongside the operator and shipped (gzipped) in the
 
 Everything runs in `openshift-secondary-scheduler-operator` (constant `OperatorNamespace` in `pkg/operator/operatorclient/`). The operator Deployment, operand Deployment, RBAC, Service, and ServiceMonitor all live here.
 
-## Directory Structure
-
-| Directory / File | Purpose |
-|-----------------|---------|
-| `cmd/secondary-scheduler-operator/` | Main operator entry point |
-| `cmd/secondary-scheduler-operator-tests-ext/` | OTE test binary entry point |
-| `pkg/apis/secondaryscheduler/v1/` | SecondaryScheduler CRD types |
-| `pkg/cmd/operator/` | Cobra command factory |
-| `pkg/operator/` | Core operator logic (reconciler, starter) |
-| `pkg/operator/operatorclient/` | Operator client adapter (constants, Get/Update/Apply) |
-| `pkg/operator/configobservation/` | TLS config observer |
-| `pkg/generated/` | Auto-generated clientset, informers, listers |
-| `pkg/version/` | Build version info and Prometheus metric |
-| `bindata/` | Embedded YAML templates for operand resources |
-| `deploy/` | Manual (non-OLM) deployment manifests |
-| `manifests/` | OLM bundle manifests (CSV, CRD, RBAC) |
-| `metadata/` | OLM metadata annotations |
-| `examples/` | Example KubeSchedulerConfiguration |
-| `hack/` | Code generation and helper scripts |
-| `test/e2e/` | End-to-end test suite |
-| `vendor/` | Vendored dependencies (don't modify directly) |
-
 ## Design Decisions
 
 | Decision | Rationale |
@@ -177,6 +139,6 @@ Everything runs in `openshift-secondary-scheduler-operator` (constant `OperatorN
 | Embedded YAML templates with placeholder substitution | Simple, auditable resource definitions; avoids programmatic resource construction |
 | ConfigMap-based scheduler configuration | Users bring their own `KubeSchedulerConfiguration`; decouples scheduler config from operator config |
 | Resource version annotations on pod template | Forces rolling update when ConfigMap or other dependencies change, even if the Deployment spec itself hasn't |
-| OwnerReferences on all managed resources | Automatic garbage collection if the CR is deleted |
+| OwnerReferences on namespaced managed resources | Automatic garbage collection of ServiceAccount, Service, Roles, RoleBindings, Deployment, ServiceMonitor when the CR is deleted; ClusterRoleBindings cannot rely on OwnerReferences for garbage collection since they are cluster-scoped |
 | HA mode with node counting | Replicas scale to available matching nodes (capped by `maxReplicas`); avoids over-provisioning |
 | OTE test binary shipped in operator image | Enables CI to extract and run e2e tests without a separate test image |
