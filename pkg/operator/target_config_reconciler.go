@@ -111,17 +111,7 @@ func NewTargetConfigReconciler(
 		return nil, err
 	}
 
-	// Watch NetworkPolicies in operator namespace for immediate reconciliation on deletion
-	_, err = kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Networking().V1().NetworkPolicies().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
-		DeleteFunc: func(obj interface{}) {
-			c.queue.Add(queueItem{kind: "secondaryscheduler"})
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Watch NetworkPolicies in all namespaces for operand deletion
+	// Watch NetworkPolicies in all namespaces for operand deletion to trigger reconciliation
 	_, err = kubeInformersForNamespaces.InformersFor("").Networking().V1().NetworkPolicies().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		DeleteFunc: func(obj interface{}) {
 			c.queue.Add(queueItem{kind: "secondaryscheduler"})
@@ -173,12 +163,12 @@ func (c TargetConfigReconciler) sync(item queueItem) error {
 		manageFunc    manageFuncType
 	}{
 		{
-			annotationKey: "networkpolicies/operator-allow",
-			manageFunc:    c.manageOperatorNetworkPolicyAllow,
-		},
-		{
 			annotationKey: "networkpolicies/operand-allow",
 			manageFunc:    c.manageOperandNetworkPolicyAllow,
+		},
+		{
+			annotationKey: "networkpolicies/operand-default-deny",
+			manageFunc:    c.manageOperandDefaultDenyNetworkPolicy,
 		},
 		{
 			annotationKey: "serviceaccounts/secondary-scheduler",
@@ -216,22 +206,17 @@ func (c TargetConfigReconciler) sync(item queueItem) error {
 			annotationKey: "servicemonitors/secondary-scheduler",
 			manageFunc:    c.manageServiceMonitor,
 		},
-		{
-			annotationKey: "networkpolicies/default-deny",
-			manageFunc:    c.manageDefaultDenyNetworkPolicy,
-		},
 	}
 
 	for _, mr := range managedResources {
-		// Handle default-deny policy separately: only create if both allow policies exist.
-		// This prevents catastrophic traffic blocking if an allow policy is deleted.
-		// If either operator-allow or operand-allow is missing, delete default-deny
-		// so traffic continues flowing while the operator restores the missing policy.
-		if mr.annotationKey == "networkpolicies/default-deny" {
-			allowPoliciesExist := c.checkAllowPoliciesExist(secondaryScheduler)
-			if !allowPoliciesExist {
-				if err := c.deleteDefaultDenyNetworkPolicy(secondaryScheduler); err != nil {
-					klog.ErrorS(err, "failed to delete default-deny policy")
+		// Handle operand default-deny separately: only create if operand-allow exists.
+		// This prevents traffic blocking if the allow policy is accidentally deleted.
+		// If operand-allow is missing, delete default-deny so traffic continues.
+		if mr.annotationKey == "networkpolicies/operand-default-deny" {
+			allowExists := c.checkNetworkPolicyExists(secondaryScheduler.Namespace, "operand-allow")
+			if !allowExists {
+				if err := c.deleteOperandDefaultDenyNetworkPolicy(secondaryScheduler); err != nil {
+					klog.ErrorS(err, "failed to delete operand default-deny policy")
 					return err
 				}
 				specAnnotations[mr.annotationKey] = "0"
@@ -267,25 +252,17 @@ func (c *TargetConfigReconciler) getConfigMapResourceVersion(secondaryScheduler 
 	return required.ObjectMeta.ResourceVersion, nil
 }
 
-// manageOperatorNetworkPolicyAllow manages the allow network policy for the operator namespace
-func (c *TargetConfigReconciler) manageOperatorNetworkPolicyAllow(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
-	required := resourceread.ReadNetworkPolicyV1OrDie(bindata.MustAsset("assets/networkpolicy-operator-allow.yaml"))
-	required.Namespace = operatorclient.OperatorNamespace
-
-	return resourceapply.ApplyNetworkPolicy(c.ctx, c.kubeClient.NetworkingV1(), c.eventRecorder, required, resourceapply.NewResourceCache())
-}
-
-// manageDefaultDenyNetworkPolicy manages the default-deny network policy (applies to all pods in namespace)
-func (c *TargetConfigReconciler) manageDefaultDenyNetworkPolicy(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
-	required := resourceread.ReadNetworkPolicyV1OrDie(bindata.MustAsset("assets/networkpolicy-default-deny.yaml"))
-	required.Namespace = operatorclient.OperatorNamespace
-
-	return resourceapply.ApplyNetworkPolicy(c.ctx, c.kubeClient.NetworkingV1(), c.eventRecorder, required, resourceapply.NewResourceCache())
-}
-
 // manageOperandNetworkPolicyAllow manages the allow network policy for the operand pods
 func (c *TargetConfigReconciler) manageOperandNetworkPolicyAllow(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
 	required := resourceread.ReadNetworkPolicyV1OrDie(bindata.MustAsset("assets/secondary-scheduler/networkpolicy-operand-allow.yaml"))
+	required.Namespace = secondaryScheduler.Namespace
+
+	return resourceapply.ApplyNetworkPolicy(c.ctx, c.kubeClient.NetworkingV1(), c.eventRecorder, required, resourceapply.NewResourceCache())
+}
+
+// manageOperandDefaultDenyNetworkPolicy manages the default-deny network policy for operand pods only
+func (c *TargetConfigReconciler) manageOperandDefaultDenyNetworkPolicy(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
+	required := resourceread.ReadNetworkPolicyV1OrDie(bindata.MustAsset("assets/secondary-scheduler/networkpolicy-operand-default-deny.yaml"))
 	required.Namespace = secondaryScheduler.Namespace
 
 	return resourceapply.ApplyNetworkPolicy(c.ctx, c.kubeClient.NetworkingV1(), c.eventRecorder, required, resourceapply.NewResourceCache())
@@ -639,23 +616,16 @@ func (c *TargetConfigReconciler) eventHandler(item queueItem) cache.ResourceEven
 	}
 }
 
-// checkAllowPoliciesExist verifies that both operator-allow and operand-allow network policies exist
-func (c *TargetConfigReconciler) checkAllowPoliciesExist(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) bool {
-	operatorAllowExists := c.checkNetworkPolicyExists(operatorclient.OperatorNamespace, "allow-all-egress-and-metrics-ingress")
-	operandAllowExists := c.checkNetworkPolicyExists(secondaryScheduler.Namespace, "allow-all-egress-and-metrics-ingress-operand")
-	return operatorAllowExists && operandAllowExists
-}
-
 // checkNetworkPolicyExists checks if a network policy exists in a given namespace
 func (c *TargetConfigReconciler) checkNetworkPolicyExists(namespace, policyName string) bool {
 	_, err := c.kubeClient.NetworkingV1().NetworkPolicies(namespace).Get(c.ctx, policyName, metav1.GetOptions{})
 	return err == nil
 }
 
-// deleteDefaultDenyNetworkPolicy deletes the default-deny network policy from the operator namespace
-func (c *TargetConfigReconciler) deleteDefaultDenyNetworkPolicy(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) error {
-	required := resourceread.ReadNetworkPolicyV1OrDie(bindata.MustAsset("assets/networkpolicy-default-deny.yaml"))
-	required.Namespace = operatorclient.OperatorNamespace
+// deleteOperandDefaultDenyNetworkPolicy deletes the operand default-deny network policy
+func (c *TargetConfigReconciler) deleteOperandDefaultDenyNetworkPolicy(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) error {
+	required := resourceread.ReadNetworkPolicyV1OrDie(bindata.MustAsset("assets/secondary-scheduler/networkpolicy-operand-default-deny.yaml"))
+	required.Namespace = secondaryScheduler.Namespace
 	_, _, err := resourceapply.DeleteNetworkPolicy(c.ctx, c.kubeClient.NetworkingV1(), c.eventRecorder, required)
 	return err
 }
