@@ -14,11 +14,8 @@ import (
 	openshiftrouteclientset "github.com/openshift/client-go/route/clientset/versioned"
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
 	"github.com/openshift/library-go/pkg/operator/loglevel"
-	"github.com/openshift/library-go/pkg/operator/resource/resourceapply"
 	"github.com/openshift/library-go/pkg/operator/resourcesynccontroller"
-	"github.com/openshift/library-go/pkg/operator/staticresourcecontroller"
 	"github.com/openshift/library-go/pkg/operator/v1helpers"
-	"github.com/openshift/secondary-scheduler-operator/bindata"
 	operatorconfigclient "github.com/openshift/secondary-scheduler-operator/pkg/generated/clientset/versioned"
 	operatorclientinformers "github.com/openshift/secondary-scheduler-operator/pkg/generated/informers/externalversions"
 	"github.com/openshift/secondary-scheduler-operator/pkg/operator/configobservation/configobservercontroller"
@@ -89,22 +86,6 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		cc.EventRecorder,
 	)
 
-	// StaticResourceController for NetworkPolicies
-	// Manages all network policies for both operator and operand pods
-	// Ordering: allow policies first, then default-deny to prevent DOS
-	staticResourceController := staticresourcecontroller.NewStaticResourceController(
-		"SecondarySchedulerOperatorNetworkPolicies",
-		bindata.Asset,
-		[]string{
-			"assets/networkpolicy-operator-allow.yaml",
-			"assets/secondary-scheduler/networkpolicy-operand-allow.yaml",
-			"assets/networkpolicy-default-deny.yaml",
-		},
-		resourceapply.NewKubeClientHolder(kubeClient),
-		secondarySchedulerClient,
-		cc.EventRecorder,
-	).AddKubeInformers(kubeInformersForNamespaces)
-
 	targetConfigReconciler, err := NewTargetConfigReconciler(
 		ctx,
 		operatorConfigClient.SecondaryschedulersV1(),
@@ -129,8 +110,6 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 
 	klog.Infof("Starting log level controller")
 	go logLevelController.Run(ctx, 1)
-	klog.Infof("Starting NetworkPolicy static resource controller")
-	go staticResourceController.Run(ctx, 1)
 	klog.Infof("Starting resource sync controller")
 	go resourceSyncController.Run(ctx, 1)
 	klog.Infof("Starting config observer")
