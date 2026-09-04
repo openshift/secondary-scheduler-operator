@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: "secondary-scheduler"
-  namespace: "openshift-secondary-scheduler-operator"
+  namespace: ${NAMESPACE}
   labels:
     app: "secondary-scheduler"
 spec:
@@ -51,7 +51,7 @@ spec:
             - --leader-elect-renew-deadline=107s
             - --leader-elect-resource-lock=leases
             - --leader-elect-resource-name=secondary-scheduler
-            - --leader-elect-resource-namespace=openshift-secondary-scheduler-operator
+            - --leader-elect-resource-namespace=${NAMESPACE}
             - --leader-elect-retry-period=26s
           env:
           - name: ENABLE_OPENSHIFT_AUTH
