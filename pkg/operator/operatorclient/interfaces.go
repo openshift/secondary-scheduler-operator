@@ -29,6 +29,7 @@ var _ v1helpers.OperatorClient = &SecondarySchedulerClient{}
 
 type SecondarySchedulerClient struct {
 	Ctx            context.Context
+	Namespace      string
 	SharedInformer cache.SharedIndexInformer
 	OperatorClient operatorconfigclientv1.SecondaryschedulersV1Interface
 }
@@ -37,8 +38,12 @@ func (c SecondarySchedulerClient) Informer() cache.SharedIndexInformer {
 	return c.SharedInformer
 }
 
+func (c SecondarySchedulerClient) GetNamespace() string {
+	return c.Namespace
+}
+
 func (c SecondarySchedulerClient) GetOperatorState() (spec *operatorv1.OperatorSpec, status *operatorv1.OperatorStatus, resourceVersion string, err error) {
-	instance, err := c.OperatorClient.SecondarySchedulers(OperatorNamespace).Get(c.Ctx, OperatorConfigName, metav1.GetOptions{})
+	instance, err := c.OperatorClient.SecondarySchedulers(c.Namespace).Get(c.Ctx, OperatorConfigName, metav1.GetOptions{})
 	if err != nil {
 		return nil, nil, "", err
 	}
@@ -50,7 +55,7 @@ func (c SecondarySchedulerClient) GetOperatorStateWithQuorum(ctx context.Context
 }
 
 func (c *SecondarySchedulerClient) UpdateOperatorSpec(ctx context.Context, resourceVersion string, spec *operatorv1.OperatorSpec) (out *operatorv1.OperatorSpec, newResourceVersion string, err error) {
-	original, err := c.OperatorClient.SecondarySchedulers(OperatorNamespace).Get(ctx, OperatorConfigName, metav1.GetOptions{})
+	original, err := c.OperatorClient.SecondarySchedulers(c.Namespace).Get(ctx, OperatorConfigName, metav1.GetOptions{})
 	if err != nil {
 		return nil, "", err
 	}
@@ -58,7 +63,7 @@ func (c *SecondarySchedulerClient) UpdateOperatorSpec(ctx context.Context, resou
 	copy.ResourceVersion = resourceVersion
 	copy.Spec.OperatorSpec = *spec
 
-	ret, err := c.OperatorClient.SecondarySchedulers(OperatorNamespace).Update(ctx, copy, v1.UpdateOptions{})
+	ret, err := c.OperatorClient.SecondarySchedulers(c.Namespace).Update(ctx, copy, v1.UpdateOptions{})
 	if err != nil {
 		return nil, "", err
 	}
@@ -67,7 +72,7 @@ func (c *SecondarySchedulerClient) UpdateOperatorSpec(ctx context.Context, resou
 }
 
 func (c *SecondarySchedulerClient) UpdateOperatorStatus(ctx context.Context, resourceVersion string, status *operatorv1.OperatorStatus) (out *operatorv1.OperatorStatus, err error) {
-	original, err := c.OperatorClient.SecondarySchedulers(OperatorNamespace).Get(ctx, OperatorConfigName, metav1.GetOptions{})
+	original, err := c.OperatorClient.SecondarySchedulers(c.Namespace).Get(ctx, OperatorConfigName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +80,7 @@ func (c *SecondarySchedulerClient) UpdateOperatorStatus(ctx context.Context, res
 	copy.ResourceVersion = resourceVersion
 	copy.Status.OperatorStatus = *status
 
-	ret, err := c.OperatorClient.SecondarySchedulers(OperatorNamespace).UpdateStatus(ctx, copy, v1.UpdateOptions{})
+	ret, err := c.OperatorClient.SecondarySchedulers(c.Namespace).UpdateStatus(ctx, copy, v1.UpdateOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +88,7 @@ func (c *SecondarySchedulerClient) UpdateOperatorStatus(ctx context.Context, res
 }
 
 func (c *SecondarySchedulerClient) GetObjectMeta() (meta *metav1.ObjectMeta, err error) {
-	instance, err := c.OperatorClient.SecondarySchedulers(OperatorNamespace).Get(c.Ctx, OperatorConfigName, metav1.GetOptions{})
+	instance, err := c.OperatorClient.SecondarySchedulers(c.Namespace).Get(c.Ctx, OperatorConfigName, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -98,10 +103,10 @@ func (c *SecondarySchedulerClient) ApplyOperatorSpec(ctx context.Context, fieldM
 	desiredSpec := &secondaryschedulerapplyconfiguration.SecondarySchedulerSpecApplyConfiguration{
 		OperatorSpecApplyConfiguration: *desiredConfiguration,
 	}
-	desired := secondaryschedulerapplyconfiguration.SecondaryScheduler(OperatorConfigName, OperatorNamespace)
+	desired := secondaryschedulerapplyconfiguration.SecondaryScheduler(OperatorConfigName, c.Namespace)
 	desired.WithSpec(desiredSpec)
 
-	instance, err := c.OperatorClient.SecondarySchedulers(OperatorNamespace).Get(ctx, OperatorConfigName, metav1.GetOptions{})
+	instance, err := c.OperatorClient.SecondarySchedulers(c.Namespace).Get(ctx, OperatorConfigName, metav1.GetOptions{})
 	switch {
 	case apierrors.IsNotFound(err):
 	// do nothing and proceed with the apply
@@ -117,7 +122,7 @@ func (c *SecondarySchedulerClient) ApplyOperatorSpec(ctx context.Context, fieldM
 		}
 	}
 
-	_, err = c.OperatorClient.SecondarySchedulers(OperatorNamespace).Apply(ctx, desired, v1.ApplyOptions{
+	_, err = c.OperatorClient.SecondarySchedulers(c.Namespace).Apply(ctx, desired, v1.ApplyOptions{
 		Force:        true,
 		FieldManager: fieldManager,
 	})
@@ -136,10 +141,10 @@ func (c *SecondarySchedulerClient) ApplyOperatorStatus(ctx context.Context, fiel
 	desiredStatus := &secondaryschedulerapplyconfiguration.SecondarySchedulerStatusApplyConfiguration{
 		OperatorStatusApplyConfiguration: *desiredConfiguration,
 	}
-	desired := secondaryschedulerapplyconfiguration.SecondaryScheduler(OperatorConfigName, OperatorNamespace)
+	desired := secondaryschedulerapplyconfiguration.SecondaryScheduler(OperatorConfigName, c.Namespace)
 	desired.WithStatus(desiredStatus)
 
-	instance, err := c.OperatorClient.SecondarySchedulers(OperatorNamespace).Get(ctx, OperatorConfigName, metav1.GetOptions{})
+	instance, err := c.OperatorClient.SecondarySchedulers(c.Namespace).Get(ctx, OperatorConfigName, metav1.GetOptions{})
 	switch {
 	case apierrors.IsNotFound(err):
 		// do nothing and proceed with the apply
@@ -161,7 +166,7 @@ func (c *SecondarySchedulerClient) ApplyOperatorStatus(ctx context.Context, fiel
 		}
 	}
 
-	_, err = c.OperatorClient.SecondarySchedulers(OperatorNamespace).ApplyStatus(ctx, desired, v1.ApplyOptions{
+	_, err = c.OperatorClient.SecondarySchedulers(c.Namespace).ApplyStatus(ctx, desired, v1.ApplyOptions{
 		Force:        true,
 		FieldManager: fieldManager,
 	})
@@ -177,6 +182,6 @@ func (c *SecondarySchedulerClient) PatchOperatorStatus(ctx context.Context, json
 	if err != nil {
 		return err
 	}
-	_, err = c.OperatorClient.SecondarySchedulers(OperatorNamespace).Patch(ctx, OperatorConfigName, types.JSONPatchType, jsonPatchBytes, metav1.PatchOptions{}, "/status")
+	_, err = c.OperatorClient.SecondarySchedulers(c.Namespace).Patch(ctx, OperatorConfigName, types.JSONPatchType, jsonPatchBytes, metav1.PatchOptions{}, "/status")
 	return err
 }
