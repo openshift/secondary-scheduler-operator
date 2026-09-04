@@ -1,0 +1,22 @@
+# Default-deny policy for operand pods (app=secondary-scheduler).
+# Only applied AFTER operand-allow policy exists to prevent traffic blocking.
+# Blocks all ingress/egress not explicitly allowed by operand-allow policy.
+#
+# Managed by operator reconciler with fail-safe logic:
+# - If operand-allow policy is deleted, this policy is automatically deleted first
+#   to prevent blocking all operand traffic while the allow policy is being restored.
+# - Do not manually edit - changes will be overwritten by the operator.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-operand
+  annotations:
+    include.release.openshift.io/self-managed-high-availability: "true"
+    include.release.openshift.io/single-node-developer: "true"
+spec:
+  podSelector:
+    matchLabels:
+      app: secondary-scheduler
+  policyTypes:
+  - Ingress
+  - Egress
