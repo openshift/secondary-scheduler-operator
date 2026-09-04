@@ -2,6 +2,7 @@ package operator
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"k8s.io/klog/v2"
@@ -43,9 +44,18 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 		return err
 	}
 
+	// Get the namespace where the operator is running
+	operatorNamespace := os.Getenv("WATCH_NAMESPACE")
+	if operatorNamespace == "" {
+		// Fallback to default namespace if WATCH_NAMESPACE is not set
+		operatorNamespace = operatorclient.OperatorNamespace
+		klog.Warningf("WATCH_NAMESPACE not set, using default: %s", operatorNamespace)
+	}
+	klog.Infof("Operator running in namespace: %s", operatorNamespace)
+
 	kubeInformersForNamespaces := v1helpers.NewKubeInformersForNamespaces(kubeClient,
 		"",
-		operatorclient.OperatorNamespace,
+		operatorNamespace,
 	)
 
 	operatorConfigClient, err := operatorconfigclient.NewForConfig(cc.KubeConfig)
@@ -55,6 +65,7 @@ func RunOperator(ctx context.Context, cc *controllercmd.ControllerContext) error
 	operatorConfigInformers := operatorclientinformers.NewSharedInformerFactory(operatorConfigClient, 10*time.Minute)
 	secondarySchedulerClient := &operatorclient.SecondarySchedulerClient{
 		Ctx:            ctx,
+		Namespace:      operatorNamespace,
 		SharedInformer: operatorConfigInformers.Secondaryschedulers().V1().SecondarySchedulers().Informer(),
 		OperatorClient: operatorConfigClient.SecondaryschedulersV1(),
 	}

@@ -88,7 +88,7 @@ func NewTargetConfigReconciler(
 		return nil, err
 	}
 
-	_, err = kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err = kubeInformersForNamespaces.InformersFor(secondarySchedulerClient.GetNamespace()).Core().V1().ConfigMaps().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {},
 		UpdateFunc: func(old, new interface{}) {
 			cm, ok := old.(*v1.ConfigMap)
@@ -122,9 +122,10 @@ func getResourceVersion(obj metav1.Object) string {
 }
 
 func (c TargetConfigReconciler) sync(item queueItem) error {
-	secondaryScheduler, err := c.operatorClient.SecondarySchedulers(operatorclient.OperatorNamespace).Get(c.ctx, operatorclient.OperatorConfigName, metav1.GetOptions{})
+	operatorNamespace := c.secondarySchedulerClient.GetNamespace()
+	secondaryScheduler, err := c.operatorClient.SecondarySchedulers(operatorNamespace).Get(c.ctx, operatorclient.OperatorConfigName, metav1.GetOptions{})
 	if err != nil {
-		klog.ErrorS(err, "unable to get operator configuration", "namespace", operatorclient.OperatorNamespace, "secondary-scheduler", operatorclient.OperatorConfigName)
+		klog.ErrorS(err, "unable to get operator configuration", "namespace", operatorNamespace, "secondary-scheduler", operatorclient.OperatorConfigName)
 		return err
 	}
 
@@ -211,7 +212,8 @@ func (c TargetConfigReconciler) sync(item queueItem) error {
 }
 
 func (c *TargetConfigReconciler) getConfigMapResourceVersion(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (string, error) {
-	required, err := c.kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Core().V1().ConfigMaps().Lister().ConfigMaps(operatorclient.OperatorNamespace).Get(secondaryScheduler.Spec.SchedulerConfig)
+	operatorNamespace := c.secondarySchedulerClient.GetNamespace()
+	required, err := c.kubeInformersForNamespaces.InformersFor(operatorNamespace).Core().V1().ConfigMaps().Lister().ConfigMaps(operatorNamespace).Get(secondaryScheduler.Spec.SchedulerConfig)
 	if err != nil {
 		return "", fmt.Errorf("could not get configuration configmap: %v", err)
 	}
@@ -408,6 +410,17 @@ func (c *TargetConfigReconciler) manageDeployment(secondaryScheduler *secondarys
 				required.Spec.Template.Spec.Volumes[i].ConfigMap.Name = configmap
 				break
 			}
+		}
+	}
+
+	// Replace ${NAMESPACE} placeholder in container args (for leader-elect-resource-namespace)
+	for i := range required.Spec.Template.Spec.Containers {
+		for j := range required.Spec.Template.Spec.Containers[i].Args {
+			required.Spec.Template.Spec.Containers[i].Args[j] = strings.ReplaceAll(
+				required.Spec.Template.Spec.Containers[i].Args[j],
+				"${NAMESPACE}",
+				secondaryScheduler.Namespace,
+			)
 		}
 	}
 
