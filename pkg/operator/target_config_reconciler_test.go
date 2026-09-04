@@ -48,6 +48,8 @@ const (
 	kubeSchedulerClusterRoleBindingName   = "secondary-scheduler-system-kube-scheduler"
 	volumeSchedulerClusterRoleBindingName = "secondary-scheduler-system-volume-scheduler"
 	schedulerConfigMapName                = "test-config"
+	allowNetworkPolicyOperandName         = "allow-all-egress-and-metrics-ingress-operand"
+	defaultDenyNetworkPolicyOperandName   = "default-deny-operand"
 
 	nodeRoleLabelControlPlane = "node-role.kubernetes.io/control-plane"
 	nodeRoleLabelWorker       = "node-role.kubernetes.io/worker"
@@ -1602,4 +1604,85 @@ func (f *fakeSyncContext) QueueKey() string {
 
 func (f *fakeSyncContext) Recorder() events.Recorder {
 	return f.recorder
+}
+
+// verifyNetworkPolicy checks that the network policy has the expected name and namespace
+func verifyNetworkPolicy(t *testing.T, obj metav1.Object, expectedName string) {
+	t.Helper()
+
+	if obj.GetName() != expectedName {
+		t.Errorf("Expected policy name %q, got %q", expectedName, obj.GetName())
+	}
+
+	if obj.GetNamespace() != operatorclient.OperatorNamespace {
+		t.Errorf("Expected policy namespace %q, got %q", operatorclient.OperatorNamespace, obj.GetNamespace())
+	}
+}
+
+func TestManageOperandNetworkPolicies(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(nil), []runtime.Object{newSchedulerConfigMap(nil)})
+
+	setup.kubeInformers.Start(ctx.Done())
+	setup.configInformers.Start(ctx.Done())
+	setup.operatorConfigInformers.Start(ctx.Done())
+
+	secondaryScheduler, err := setup.operatorClient.OperatorClient.SecondarySchedulers(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperatorConfigName, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("failed to get SecondaryScheduler: %v", err)
+	}
+
+	tests := []struct {
+		name         string
+		manageFunc   func(*TargetConfigReconciler, *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error)
+		expectedName string
+	}{
+		{
+			name:         "creates allow network policy",
+			manageFunc:   (*TargetConfigReconciler).manageOperandNetworkPolicyAllow,
+			expectedName: allowNetworkPolicyOperandName,
+		},
+		{
+			name:         "creates default deny network policy",
+			manageFunc:   (*TargetConfigReconciler).manageOperandDefaultDenyNetworkPolicy,
+			expectedName: defaultDenyNetworkPolicyOperandName,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			obj, modified, err := tt.manageFunc(setup.reconciler, secondaryScheduler)
+			if err != nil {
+				t.Fatalf("manage function failed: %v", err)
+			}
+
+			if !modified {
+				t.Error("Expected modified=true when creating policy")
+			}
+
+			verifyNetworkPolicy(t, obj, tt.expectedName)
+		})
+	}
+
+	t.Run("checkNetworkPolicyExists returns correct status", func(t *testing.T) {
+		// Non-existent policy should return false
+		exists := setup.reconciler.checkNetworkPolicyExists("non-existent-ns", "non-existent-policy")
+		if exists {
+			t.Error("Expected checkNetworkPolicyExists to return false for non-existent policy")
+		}
+
+		// Create a policy explicitly for this test
+		_, _, err := setup.reconciler.manageOperandNetworkPolicyAllow(secondaryScheduler)
+		if err != nil {
+			t.Fatalf("failed to create network policy: %v", err)
+		}
+
+		// After creating a policy, it should return true
+		exists = setup.reconciler.checkNetworkPolicyExists(operatorclient.OperatorNamespace, allowNetworkPolicyOperandName)
+		if !exists {
+			t.Error("Expected checkNetworkPolicyExists to return true for created policy")
+		}
+	})
 }

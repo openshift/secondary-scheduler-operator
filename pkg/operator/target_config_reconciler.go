@@ -25,6 +25,7 @@ import (
 	"github.com/openshift/library-go/pkg/controller"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -111,8 +112,13 @@ func NewTargetConfigReconciler(
 		return nil, err
 	}
 
-	// Watch NetworkPolicies in all namespaces for operand deletion to trigger reconciliation
-	_, err = kubeInformersForNamespaces.InformersFor("").Networking().V1().NetworkPolicies().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	// Watch NetworkPolicies in operator namespace for immediate reconciliation on deletion or modification.
+	// Only watches operator namespace because all operand resources (including NetworkPolicies)
+	// are created in the same namespace as the SecondaryScheduler CR (always operator namespace).
+	_, err = kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Networking().V1().NetworkPolicies().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			c.queue.Add(queueItem{kind: "secondaryscheduler"})
+		},
 		DeleteFunc: func(obj interface{}) {
 			c.queue.Add(queueItem{kind: "secondaryscheduler"})
 		},
@@ -213,7 +219,7 @@ func (c TargetConfigReconciler) sync(item queueItem) error {
 		// This prevents traffic blocking if the allow policy is accidentally deleted.
 		// If operand-allow is missing, delete default-deny so traffic continues.
 		if mr.annotationKey == "networkpolicies/operand-default-deny" {
-			allowExists := c.checkNetworkPolicyExists(secondaryScheduler.Namespace, "operand-allow")
+			allowExists := c.checkNetworkPolicyExists(secondaryScheduler.Namespace, "allow-all-egress-and-metrics-ingress-operand")
 			if !allowExists {
 				if err := c.deleteOperandDefaultDenyNetworkPolicy(secondaryScheduler); err != nil {
 					klog.ErrorS(err, "failed to delete operand default-deny policy")
@@ -619,6 +625,9 @@ func (c *TargetConfigReconciler) eventHandler(item queueItem) cache.ResourceEven
 // checkNetworkPolicyExists checks if a network policy exists in a given namespace
 func (c *TargetConfigReconciler) checkNetworkPolicyExists(namespace, policyName string) bool {
 	_, err := c.kubeClient.NetworkingV1().NetworkPolicies(namespace).Get(c.ctx, policyName, metav1.GetOptions{})
+	if err != nil && !apierrors.IsNotFound(err) {
+		klog.V(4).InfoS("unexpected error checking network policy existence", "namespace", namespace, "name", policyName, "error", err)
+	}
 	return err == nil
 }
 
