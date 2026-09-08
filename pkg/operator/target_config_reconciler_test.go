@@ -177,6 +177,7 @@ func setupFakeClients(t *testing.T, apiServer *configv1.APIServer, secondarySche
 
 	secondarySchedulerClient := &operatorclient.SecondarySchedulerClient{
 		Ctx:            context.TODO(),
+		Namespace:      operatorclient.OperatorNamespace,
 		SharedInformer: operatorConfigInformers.Secondaryschedulers().V1().SecondarySchedulers().Informer(),
 		OperatorClient: fakeOperatorConfigClient.SecondaryschedulersV1(),
 	}
