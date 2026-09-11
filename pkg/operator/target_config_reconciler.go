@@ -111,6 +111,21 @@ func NewTargetConfigReconciler(
 		return nil, err
 	}
 
+	// Watch NetworkPolicies in operator namespace for immediate reconciliation on deletion or modification.
+	// Only watches operator namespace because all operand resources (including NetworkPolicies)
+	// are created in the same namespace as the SecondaryScheduler CR (always operator namespace).
+	_, err = kubeInformersForNamespaces.InformersFor(operatorclient.OperatorNamespace).Networking().V1().NetworkPolicies().Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			c.queue.Add(queueItem{kind: "secondaryscheduler"})
+		},
+		DeleteFunc: func(obj interface{}) {
+			c.queue.Add(queueItem{kind: "secondaryscheduler"})
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	return c, nil
 }
 
@@ -153,6 +168,10 @@ func (c TargetConfigReconciler) sync(item queueItem) error {
 		annotationKey string
 		manageFunc    manageFuncType
 	}{
+		{
+			annotationKey: "networkpolicies/operand-allow",
+			manageFunc:    c.manageOperandNetworkPolicyAllow,
+		},
 		{
 			annotationKey: "serviceaccounts/secondary-scheduler",
 			manageFunc:    c.manageServiceAccount,
@@ -219,6 +238,14 @@ func (c *TargetConfigReconciler) getConfigMapResourceVersion(secondaryScheduler 
 	}
 
 	return required.ObjectMeta.ResourceVersion, nil
+}
+
+// manageOperandNetworkPolicyAllow manages the allow network policy for the operand pods
+func (c *TargetConfigReconciler) manageOperandNetworkPolicyAllow(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
+	required := resourceread.ReadNetworkPolicyV1OrDie(bindata.MustAsset("assets/secondary-scheduler/networkpolicy-operand-allow.yaml"))
+	required.Namespace = secondaryScheduler.Namespace
+
+	return resourceapply.ApplyNetworkPolicy(c.ctx, c.kubeClient.NetworkingV1(), c.eventRecorder, required, resourceapply.NewResourceCache())
 }
 
 func (c *TargetConfigReconciler) manageServiceAccount(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
