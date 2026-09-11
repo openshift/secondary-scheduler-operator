@@ -27,7 +27,7 @@ metadata:
       ]
     certified: "false"
     containerImage: registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-rhel9-operator:latest
-    createdAt: "2026-08-16"
+    createdAt: "2026-09-11"
     features.operators.openshift.io/disconnected: "true"
     features.operators.openshift.io/fips-compliant: "true"
     features.operators.openshift.io/proxy-aware: "false"
