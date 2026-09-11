@@ -9,6 +9,7 @@ ARG OPERATOR_IMAGE=registry.redhat.io/openshift-secondary-scheduler-operator/sec
 ARG REPLACED_OPERATOR_IMG=registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-rhel9-operator:latest
 
 RUN hack/replace-image.sh manifests ${REPLACED_OPERATOR_IMG} ${OPERATOR_IMAGE}
+RUN sed -i "s/createdAt: \".*\"/createdAt: \"$(date -I)\"/" manifests/cluster-secondary-scheduler-operator.clusterserviceversion.yaml
 
 FROM registry.access.redhat.com/ubi9/ubi-minimal:latest@sha256:580752f96d36c4132bffd30f9c34865bf4bd87f6aa161c969d117f21732e50f7
 
