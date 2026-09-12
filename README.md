@@ -4,25 +4,22 @@ The Secondary Scheduler Operator provides the ability to deploy a customized sch
 
 ## Releases
 
-| osso version | ocp version       | k8s version | golang | release branch |
-| ------------ | ----------------- | ----------- | ------ | -------------- |
-| 1.1.0        | 4.11-4.13         | 1.21        | 1.18   | 4.13           |
-| 1.1.2-1.1.5  | 4.12, 4.13        | 1.26        | 1.19   | 4.13           |
-| 1.1.6        | 4.12, 4.13        | 1.26        | 1.19   | 4.13           |
-| 1.2.0        | 4.14, 4.15        | 1.27        | 1.20   | 4.15           |
-| 1.2.1-1.2.3  | 4.14, 4.15        | 1.28        | 1.20   | 4.15           |
-| 1.2.4        | 4.14, 4.15        | 1.28        | 1.20   | 4.15           |
-| 1.3.0        | 4.16, 4.17        | 1.29        | 1.21   | 4.17           |
-| 1.3.1-1.3.2  | 4.16, 4.17        | 1.30        | 1.22   | 4.17           |
-| 1.3.3        | 4.16, 4.17        | 1.30        | 1.22   | 4.17           |
-| 1.4.0        | 4.18, 4.19        | 1.31        | 1.22   | 4.19           |
-| 1.4.1-1.4.2  | 4.18, 4.19        | 1.32        | 1.23   | 4.19           |
-| 1.4.3        | 4.18, 4.19        | 1.32        | 1.23   | 4.19           |
-| 1.5.0        | 4.20, 4.21        | 1.33        | 1.24   | 4.21           |
-| 1.5.1        | 4.20, 4.21        | 1.34        | 1.24   | 4.21           |
-| 1.5.2        | 4.20, 4.21        | 1.34        | 1.24   | 4.21           |
-| 1.6.0        | 4.22, 4.23        | 1.35        | 1.25   | 4.23           |
-| 1.6.1        | 4.22, 4.23        | 1.36        | 1.26   | 4.23           |
+```
+releases:
+- {version: "1.1.0",       ocp_version: "4.11-4.13",  k8s_version: "1.21", golang: "1.18", release_branch: "4.11"}
+- {version: "1.1.2",       ocp_version: "4.12, 4.13", k8s_version: "1.26", golang: "1.19", release_branch: "4.12"}
+- {version: "1.1.3-1.1.6", ocp_version: "4.12, 4.13", k8s_version: "1.26", golang: "1.19", release_branch: "4.13"}
+- {version: "1.2.0",       ocp_version: "4.14, 4.15", k8s_version: "1.27", golang: "1.20", release_branch: "4.14"}
+- {version: "1.2.1-1.2.4", ocp_version: "4.14, 4.15", k8s_version: "1.28", golang: "1.20", release_branch: "4.15"}
+- {version: "1.3.0",       ocp_version: "4.16, 4.17", k8s_version: "1.29", golang: "1.21", release_branch: "4.16"}
+- {version: "1.3.1-1.3.3", ocp_version: "4.16, 4.17", k8s_version: "1.30", golang: "1.22", release_branch: "4.17"}
+- {version: "1.4.0",       ocp_version: "4.18, 4.19", k8s_version: "1.31", golang: "1.22", release_branch: "4.18"}
+- {version: "1.4.1-1.4.3", ocp_version: "4.18, 4.19", k8s_version: "1.32", golang: "1.23", release_branch: "4.19"}
+- {version: "1.5.0",       ocp_version: "4.20, 4.21", k8s_version: "1.33", golang: "1.24", release_branch: "4.20"}
+- {version: "1.5.1-1.5.2", ocp_version: "4.20, 4.21", k8s_version: "1.34", golang: "1.24", release_branch: "4.21"}
+- {version: "1.6.0",       ocp_version: "4.22, 5.0",  k8s_version: "1.35", golang: "1.25", release_branch: "4.22"}
+- {version: "1.6.1",       ocp_version: "4.22, 5.0",  k8s_version: "1.36", golang: "1.26", release_branch: "5.0"}
+```
 
 ## Deploy the Operator
 
