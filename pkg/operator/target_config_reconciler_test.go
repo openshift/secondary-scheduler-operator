@@ -48,6 +48,7 @@ const (
 	kubeSchedulerClusterRoleBindingName   = "secondary-scheduler-system-kube-scheduler"
 	volumeSchedulerClusterRoleBindingName = "secondary-scheduler-system-volume-scheduler"
 	schedulerConfigMapName                = "test-config"
+	allowNetworkPolicyOperandName         = "allow-all-egress-and-metrics-ingress-operand"
 
 	nodeRoleLabelControlPlane = "node-role.kubernetes.io/control-plane"
 	nodeRoleLabelWorker       = "node-role.kubernetes.io/worker"
@@ -1603,4 +1604,39 @@ func (f *fakeSyncContext) QueueKey() string {
 
 func (f *fakeSyncContext) Recorder() events.Recorder {
 	return f.recorder
+}
+
+func TestManageOperandNetworkPolicies(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	setup := setupTestReconciler(t, ctx, nil, newSecondaryScheduler(nil), []runtime.Object{newSchedulerConfigMap(nil)})
+
+	setup.kubeInformers.Start(ctx.Done())
+	setup.configInformers.Start(ctx.Done())
+	setup.operatorConfigInformers.Start(ctx.Done())
+
+	secondaryScheduler, err := setup.operatorClient.OperatorClient.SecondarySchedulers(operatorclient.OperatorNamespace).Get(ctx, operatorclient.OperatorConfigName, metav1.GetOptions{})
+	if err != nil {
+		t.Fatalf("failed to get SecondaryScheduler: %v", err)
+	}
+
+	t.Run("creates allow network policy", func(t *testing.T) {
+		obj, modified, err := setup.reconciler.manageOperandNetworkPolicyAllow(secondaryScheduler)
+		if err != nil {
+			t.Fatalf("failed to create allow policy: %v", err)
+		}
+
+		if !modified {
+			t.Error("Expected modified=true when creating policy")
+		}
+
+		if obj.GetName() != allowNetworkPolicyOperandName {
+			t.Errorf("Expected policy name %q, got %q", allowNetworkPolicyOperandName, obj.GetName())
+		}
+
+		if obj.GetNamespace() != operatorclient.OperatorNamespace {
+			t.Errorf("Expected policy namespace %q, got %q", operatorclient.OperatorNamespace, obj.GetNamespace())
+		}
+	})
 }
