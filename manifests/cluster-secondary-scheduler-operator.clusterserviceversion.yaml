@@ -46,6 +46,7 @@ metadata:
 spec:
   replaces: secondaryscheduleroperator.v1.0.0
   skips:
+    - secondaryscheduleroperator.v1.0.0
     - secondaryscheduleroperator.v1.0.1
     - secondaryscheduleroperator.v1.0.2
     - secondaryscheduleroperator.v1.0.3
@@ -57,7 +58,6 @@ spec:
     - secondaryscheduleroperator.v1.1.2
     - secondaryscheduleroperator.v1.1.3
     - secondaryscheduleroperator.v1.1.4
-    - secondaryscheduleroperator.v1.0.0
     - secondaryscheduleroperator.v1.1.5
   customresourcedefinitions:
     owned:
