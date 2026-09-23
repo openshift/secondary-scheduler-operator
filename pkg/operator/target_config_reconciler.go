@@ -247,6 +247,16 @@ func (c *TargetConfigReconciler) getConfigMapResourceVersion(secondaryScheduler 
 func (c *TargetConfigReconciler) manageOperandNetworkPolicyAllow(secondaryScheduler *secondaryschedulersv1.SecondaryScheduler) (metav1.Object, bool, error) {
 	required := resourceread.ReadNetworkPolicyV1OrDie(bindata.MustAsset("assets/secondary-scheduler/networkpolicy-operand-allow.yaml"))
 	required.Namespace = secondaryScheduler.Namespace
+	ownerReference := metav1.OwnerReference{
+		APIVersion: "operator.openshift.io/v1",
+		Kind:       "SecondaryScheduler",
+		Name:       secondaryScheduler.Name,
+		UID:        secondaryScheduler.UID,
+	}
+	required.OwnerReferences = []metav1.OwnerReference{
+		ownerReference,
+	}
+	controller.EnsureOwnerRef(required, ownerReference)
 
 	return resourceapply.ApplyNetworkPolicy(c.ctx, c.kubeClient.NetworkingV1(), c.eventRecorder, required, resourceapply.NewResourceCache())
 }
