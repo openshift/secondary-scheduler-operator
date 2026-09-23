@@ -239,6 +239,18 @@ spec:
                 - watch
                 - patch
                 - update
+            - apiGroups:
+                - networking.k8s.io
+              resources:
+                - networkpolicies
+              verbs:
+                - create
+                - delete
+                - get
+                - list
+                - patch
+                - update
+                - watch
       deployments:
         - name: secondary-scheduler-operator
           spec:
