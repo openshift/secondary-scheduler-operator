@@ -48,7 +48,7 @@ const (
 	kubeSchedulerClusterRoleBindingName   = "secondary-scheduler-system-kube-scheduler"
 	volumeSchedulerClusterRoleBindingName = "secondary-scheduler-system-volume-scheduler"
 	schedulerConfigMapName                = "test-config"
-	allowNetworkPolicyOperandName         = "allow-all-egress-and-metrics-ingress-operand"
+	allowNetworkPolicyOperandName         = "secondary-scheduler-operand"
 
 	nodeRoleLabelControlPlane = "node-role.kubernetes.io/control-plane"
 	nodeRoleLabelWorker       = "node-role.kubernetes.io/worker"
