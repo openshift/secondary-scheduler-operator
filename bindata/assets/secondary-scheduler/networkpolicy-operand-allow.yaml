@@ -12,7 +12,7 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-all-egress-and-metrics-ingress-operand
+  name: secondary-scheduler-operand
   namespace: openshift-secondary-scheduler-operator
   annotations:
     include.release.openshift.io/self-managed-high-availability: "true"
