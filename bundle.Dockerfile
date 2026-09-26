@@ -5,7 +5,7 @@ COPY . .
 RUN mkdir licenses
 COPY ./LICENSE licenses/.
 
-ARG OPERATOR_IMAGE=registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator@sha256:db8862986da1430292088b633ca5a76503e6ac8af369dfdab4871eaf53eafdfe
+ARG OPERATOR_IMAGE=registry.redhat.io/openshift-secondary-scheduler-operator/secondary-scheduler-rhel9-operator@sha256:5f8671ee05c81c0d6aa654a6f744fb42944f545e8eedb4bad92a15d29dc548aa
 ARG REPLACED_OPERATOR_IMG=registry-proxy.engineering.redhat.com/rh-osbs/secondary-scheduler-rhel9-operator:latest
 #
 RUN hack/replace-image.sh manifests ${REPLACED_OPERATOR_IMG} ${OPERATOR_IMAGE}
