@@ -52,6 +52,7 @@ bundles:
 releases:
   - operator: "1.6"
     ocp:
+      - "5.0"
       - "4.23"
       - "4.22"
   - operator: "1.5"
