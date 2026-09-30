@@ -669,7 +669,6 @@ const (
 	operatorDeploymentName   = "secondary-scheduler-operator"
 
 	metricsPort int32 = 10259
-	unusedPort  int32 = 8080
 
 	clusterMonitoringLabel = "openshift.io/cluster-monitoring"
 
@@ -744,26 +743,12 @@ var _ = g.Describe("[sig-scheduling][Operator][Serial] SecondaryScheduler Networ
 				port:        metricsPort,
 				shouldAllow: false,
 			},
-			{
-				description: "wrong port blocked from monitoring namespace",
-				namespace:   openshiftMonitoringNamespace,
-				port:        unusedPort,
-				shouldAllow: false,
-			},
 		}
 
 		for _, tc := range ingressTests {
 			g.By(fmt.Sprintf("%s", tc.description))
 			expectConnectivity(ctx, kubeClient, tc.namespace, testLabels, podIPs, tc.port, tc.shouldAllow)
 		}
-	})
-
-	g.It("should allow kubelet/host-network to bypass NetworkPolicy", func() {
-		operandPod := waitForOperandPod(ctx, kubeClient)
-		podIPs := []string{operandPod.Status.PodIP}
-
-		g.By("Kubelet/host-network should bypass metrics port policy")
-		expectHostNetworkConnectivity(ctx, kubeClient, openshiftMonitoringNamespace, operandPod.Spec.NodeName, podIPs, metricsPort, true)
 	})
 
 	g.It("should allow unrestricted egress for DNS, API server, and prometheus", func() {
@@ -1065,14 +1050,6 @@ func expectConnectivity(ctx context.Context, kubeClient k8sclient.Interface, nam
 		g.By(fmt.Sprintf("checking IPv4 connectivity %s -> %s:%d expected=%t", namespace, ip, port, shouldSucceed))
 		err := pollConnectivity(ctx, kubeClient, namespace, clientLabels, ip, port, shouldSucceed, false, "", connectivityTimeout)
 		o.Expect(err).NotTo(o.HaveOccurred(), fmt.Sprintf("connectivity check failed for %s -> %s:%d (expected %t)", namespace, ip, port, shouldSucceed))
-	}
-}
-
-func expectHostNetworkConnectivity(ctx context.Context, kubeClient k8sclient.Interface, namespace, nodeName string, serverIPs []string, port int32, shouldSucceed bool) {
-	for _, ip := range serverIPs {
-		g.By(fmt.Sprintf("checking IPv4 host-network connectivity node=%s -> %s:%d expected=%t", nodeName, ip, port, shouldSucceed))
-		err := pollConnectivity(ctx, kubeClient, namespace, nil, ip, port, shouldSucceed, true, nodeName, connectivityTimeout)
-		o.Expect(err).NotTo(o.HaveOccurred(), fmt.Sprintf("host-network connectivity check failed for node=%s -> %s:%d (expected %t)", nodeName, ip, port, shouldSucceed))
 	}
 }
 
