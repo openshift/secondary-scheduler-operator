@@ -3,7 +3,7 @@ WORKDIR /go/src/github.com/openshift/secondary-scheduler-operator
 COPY . .
 RUN make build --warn-undefined-variables
 
-FROM registry.redhat.io/rhel9-2-els/rhel-minimal:9.2-1792010189
+FROM registry.redhat.io/rhel9-2-els/rhel-minimal:9.2-1792761790
 COPY --from=builder /go/src/github.com/openshift/secondary-scheduler-operator/secondary-scheduler-operator /usr/bin/
 RUN mkdir /licenses
 COPY --from=builder /go/src/github.com/openshift/secondary-scheduler-operator/LICENSE /licenses/.
