@@ -14,6 +14,7 @@ import (
 	monitoringv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -32,6 +33,18 @@ import (
 	secondaryschedulerscheme "github.com/openshift/secondary-scheduler-operator/pkg/generated/clientset/versioned/scheme"
 	"github.com/openshift/secondary-scheduler-operator/pkg/operator/operatorclient"
 	"github.com/openshift/secondary-scheduler-operator/test/e2e/bindata"
+)
+
+const (
+	// NetworkPolicy test constants
+	agnhostImage         = "registry.k8s.io/e2e-test-images/agnhost:2.66.1"
+	metricsPort          = "10259"
+	connectionTimeout    = "5s"
+	monitoringNamespace  = "openshift-monitoring"
+	testAllowedNamespace = "e2e-netpol-allowed-test"
+	testDeniedNamespace  = "e2e-netpol-denied-test"
+	monitoringLabelKey   = "openshift.io/cluster-monitoring"
+	monitoringLabelValue = "true"
 )
 
 // extractClusterRoleFromCSV extracts the ClusterRole from CSV bytes
@@ -580,6 +593,264 @@ func testMetricsDataAvailable(t testing.TB, ctx context.Context, kubeClient *k8s
 	klog.Infof("Metrics data verified successfully")
 }
 
+// testNetworkPolicyForOperand validates the secondary-scheduler-operand NetworkPolicy
+func testNetworkPolicyForOperand(t testing.TB, ctx context.Context, kubeClient *k8sclient.Clientset) {
+	testSecondarySchedulerOperandNetworkPolicy(t, ctx, kubeClient)
+
+	klog.Infof("Testing NetworkPolicy reconciliation (recreation after deletion)")
+	testNetworkPolicyRecreation(t, ctx, kubeClient, "secondary-scheduler-operand")
+
+	klog.Infof("Testing NetworkPolicy reconciliation (reversion of manual changes)")
+	testNetworkPolicyReversion(t, ctx, kubeClient, "secondary-scheduler-operand")
+}
+
+// validateEgressAllowAll verifies that egress rules allow all traffic (single empty rule)
+func validateEgressAllowAll(np *networkingv1.NetworkPolicy) {
+	o.Expect(np.Spec.Egress).To(o.HaveLen(1), "Expected exactly one egress rule")
+	egressRule := np.Spec.Egress[0]
+	o.Expect(egressRule.To).To(o.BeEmpty(), "Egress rule should have no 'to' restrictions (allow all)")
+	o.Expect(egressRule.Ports).To(o.BeEmpty(), "Egress rule should have no port restrictions (allow all)")
+}
+
+// networkPolicyConnTest describes a connectivity test scenario for NetworkPolicy validation
+type networkPolicyConnTest struct {
+	name              string
+	namespace         *corev1.Namespace
+	expectSuccess     bool
+	podName           string
+	ginkgoDescription string
+}
+
+func testSecondarySchedulerOperandNetworkPolicy(t testing.TB, ctx context.Context, kubeClient *k8sclient.Clientset) {
+	networkPolicyName := "secondary-scheduler-operand"
+
+	networkPolicy, err := kubeClient.NetworkingV1().NetworkPolicies(operatorclient.OperatorNamespace).Get(ctx, networkPolicyName, metav1.GetOptions{})
+	o.Expect(err).NotTo(o.HaveOccurred(), "NetworkPolicy %s should exist in namespace %s", networkPolicyName, operatorclient.OperatorNamespace)
+	klog.Infof("NetworkPolicy %s exists in namespace %s", networkPolicy.Name, operatorclient.OperatorNamespace)
+
+	o.Expect(networkPolicy.Spec.PolicyTypes).To(o.ContainElement(networkingv1.PolicyTypeEgress), "policyTypes should include Egress")
+	validateEgressAllowAll(networkPolicy)
+	klog.Infof("NetworkPolicy egress rules correctly configured to allow all traffic")
+
+	secondarySchedulerService := fmt.Sprintf("metrics.%s.svc:%s", operatorclient.OperatorNamespace, metricsPort)
+
+	tests := []networkPolicyConnTest{
+		{
+			name:              "openshift-monitoring",
+			namespace:         nil,
+			expectSuccess:     true,
+			podName:           "e2e-netpol-test-monitoring",
+			ginkgoDescription: "Testing connection from openshift-monitoring namespace (should succeed)",
+		},
+		{
+			name: "labeled-namespace",
+			namespace: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testAllowedNamespace,
+					Labels: map[string]string{
+						monitoringLabelKey: monitoringLabelValue,
+					},
+				},
+			},
+			expectSuccess:     true,
+			podName:           "e2e-netpol-test-allowed",
+			ginkgoDescription: "Testing connection from labeled namespace (should succeed)",
+		},
+		{
+			name: "unauthorized-namespace",
+			namespace: &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: testDeniedNamespace,
+				},
+			},
+			expectSuccess:     false,
+			podName:           "e2e-netpol-test-denied",
+			ginkgoDescription: "Testing connection from unauthorized namespace (should fail)",
+		},
+	}
+
+	for _, tc := range tests {
+		func(tc networkPolicyConnTest) {
+			klog.Info(tc.ginkgoDescription)
+
+			namespaceName := monitoringNamespace
+			if tc.namespace != nil {
+				namespaceName = tc.namespace.Name
+				_, err := kubeClient.CoreV1().Namespaces().Create(ctx, tc.namespace, metav1.CreateOptions{})
+				o.Expect(err).NotTo(o.HaveOccurred(), "Should create namespace %s", namespaceName)
+				defer cleanupTestNamespace(t, ctx, kubeClient, namespaceName)
+			}
+
+			pod := createAgnhostConnectPod(ctx, t, kubeClient, namespaceName, tc.podName, secondarySchedulerService, connectionTimeout)
+			defer deletePodAndWait(ctx, t, kubeClient, namespaceName, pod.Name)
+
+			err := waitForPodCompletion(ctx, t, kubeClient, namespaceName, pod.Name, tc.expectSuccess)
+			o.Expect(err).NotTo(o.HaveOccurred(), "Connection test '%s' failed", tc.name)
+			klog.Infof("Test '%s' passed", tc.name)
+		}(tc)
+	}
+
+	klog.Infof("NetworkPolicy ingress rules validated successfully")
+}
+
+// createAgnhostConnectPod creates an agnhost pod that runs the connect command
+func createAgnhostConnectPod(ctx context.Context, t testing.TB, kubeClient *k8sclient.Clientset, namespace, name, target, timeout string) *corev1.Pod {
+	pod := &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels:    map[string]string{"app": "e2e-netpol-test"},
+		},
+		Spec: corev1.PodSpec{
+			SecurityContext: &corev1.PodSecurityContext{
+				RunAsNonRoot: utilpointer.BoolPtr(true),
+				SeccompProfile: &corev1.SeccompProfile{
+					Type: corev1.SeccompProfileTypeRuntimeDefault,
+				},
+			},
+			Containers: []corev1.Container{
+				{
+					Name:            "agnhost",
+					Image:           agnhostImage,
+					ImagePullPolicy: corev1.PullIfNotPresent,
+					Args: []string{
+						"connect",
+						target,
+						fmt.Sprintf("--timeout=%s", timeout),
+						"--protocol=tcp",
+					},
+					SecurityContext: &corev1.SecurityContext{
+						AllowPrivilegeEscalation: utilpointer.BoolPtr(false),
+						Capabilities: &corev1.Capabilities{
+							Drop: []corev1.Capability{"ALL"},
+						},
+					},
+				},
+			},
+			RestartPolicy: corev1.RestartPolicyNever,
+		},
+	}
+
+	createdPod, err := kubeClient.CoreV1().Pods(namespace).Create(ctx, pod, metav1.CreateOptions{})
+	o.Expect(err).NotTo(o.HaveOccurred(), "Should create agnhost connect pod in namespace %s", namespace)
+	klog.Infof("Created agnhost connect pod %s/%s with command: connect %s --timeout=%s --protocol=tcp", namespace, name, target, timeout)
+
+	return createdPod
+}
+
+// waitForPodCompletion waits for a pod to complete and checks if it succeeded or failed
+// expectSuccess indicates whether the pod should succeed (exit 0) or fail (exit non-zero)
+func waitForPodCompletion(ctx context.Context, t testing.TB, kubeClient *k8sclient.Clientset, namespace, podName string, expectSuccess bool) error {
+	klog.Infof("Waiting for pod %s/%s to complete (expectSuccess=%v)", namespace, podName, expectSuccess)
+
+	var finalPod *corev1.Pod
+	o.Eventually(func() bool {
+		p, err := kubeClient.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
+		if err != nil {
+			klog.V(2).Infof("Error getting pod %s/%s: %v", namespace, podName, err)
+			return false
+		}
+		klog.V(2).Infof("Pod %s/%s phase: %s", namespace, podName, p.Status.Phase)
+		if p.Status.Phase == corev1.PodSucceeded || p.Status.Phase == corev1.PodFailed {
+			finalPod = p
+			return true
+		}
+		return false
+	}).WithTimeout(30*time.Second).WithPolling(2*time.Second).Should(o.BeTrue(), "Pod should complete")
+
+	succeeded := finalPod.Status.Phase == corev1.PodSucceeded
+
+	if !succeeded {
+		logs, err := kubeClient.CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{}).Do(ctx).Raw()
+		if err == nil && len(logs) > 0 {
+			logStr := string(logs)
+			// Check for agnhost error prefixes that indicate non-policy failures
+			// See https://github.com/kubernetes/kubernetes/blob/master/test/images/agnhost/README.md#connect
+			if strings.HasPrefix(logStr, "DNS") || strings.HasPrefix(logStr, "REFUSED") ||
+				strings.HasPrefix(logStr, "UNKNOWN") || strings.HasPrefix(logStr, "OTHER") {
+				return fmt.Errorf("pod failed with non-policy error (expectSuccess=%v): %s", expectSuccess, logStr)
+			}
+		}
+	}
+
+	if succeeded != expectSuccess {
+		detail := ""
+		if len(finalPod.Status.ContainerStatuses) > 0 && finalPod.Status.ContainerStatuses[0].State.Terminated != nil {
+			t := finalPod.Status.ContainerStatuses[0].State.Terminated
+			detail = fmt.Sprintf(": exit code %d, reason: %s", t.ExitCode, t.Reason)
+		}
+		return fmt.Errorf("expected pod to have succeeded=%v but got %s%s", expectSuccess, finalPod.Status.Phase, detail)
+	}
+
+	klog.Infof("Pod %s/%s phase %s as expected", namespace, podName, finalPod.Status.Phase)
+	return nil
+}
+
+// deletePodAndWait deletes a pod and waits for it to be removed
+func deletePodAndWait(ctx context.Context, t testing.TB, kubeClient *k8sclient.Clientset, namespace, podName string) {
+	klog.Infof("Deleting pod %s/%s", namespace, podName)
+	err := kubeClient.CoreV1().Pods(namespace).Delete(ctx, podName, metav1.DeleteOptions{})
+	if err != nil && !apierrors.IsNotFound(err) {
+		klog.Warningf("Failed to delete pod %s/%s: %v", namespace, podName, err)
+	}
+
+	o.Eventually(func() bool {
+		_, err := kubeClient.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			return true
+		}
+		return false
+	}).WithTimeout(1*time.Minute).WithPolling(2*time.Second).Should(o.BeTrue(), "Pod should be deleted")
+}
+
+// testNetworkPolicyRecreation verifies that the operator recreates NetworkPolicy if deleted
+func testNetworkPolicyRecreation(t testing.TB, ctx context.Context, kubeClient *k8sclient.Clientset, networkPolicyName string) {
+	err := kubeClient.NetworkingV1().NetworkPolicies(operatorclient.OperatorNamespace).Delete(ctx, networkPolicyName, metav1.DeleteOptions{})
+	o.Expect(err).NotTo(o.HaveOccurred())
+
+	o.Eventually(func() bool {
+		_, err := kubeClient.NetworkingV1().NetworkPolicies(operatorclient.OperatorNamespace).Get(ctx, networkPolicyName, metav1.GetOptions{})
+		return err == nil
+	}).WithTimeout(1*time.Minute).WithPolling(2*time.Second).Should(o.BeTrue(), "Operator should recreate NetworkPolicy")
+}
+
+// testNetworkPolicyReversion verifies that the operator reverts manual changes to NetworkPolicy
+// NOTE: This is not a comprehensive test. Complete validation of operator reconciliation logic
+// is done through unit tests. This e2e test only exercises the minimal mechanics of triggering
+// reconciliation through event handlers.
+func testNetworkPolicyReversion(t testing.TB, ctx context.Context, kubeClient *k8sclient.Clientset, networkPolicyName string) {
+	np, err := kubeClient.NetworkingV1().NetworkPolicies(operatorclient.OperatorNamespace).Get(ctx, networkPolicyName, metav1.GetOptions{})
+	o.Expect(err).NotTo(o.HaveOccurred())
+
+	originalResourceVersion := np.ResourceVersion
+	originalIngressRuleCount := len(np.Spec.Ingress)
+
+	np.Spec.Ingress = append(np.Spec.Ingress, networkingv1.NetworkPolicyIngressRule{
+		From: []networkingv1.NetworkPolicyPeer{
+			{
+				NamespaceSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"test.e2e/manual": "should-revert",
+					},
+				},
+			},
+		},
+	})
+
+	updatedNP, err := kubeClient.NetworkingV1().NetworkPolicies(operatorclient.OperatorNamespace).Update(ctx, np, metav1.UpdateOptions{})
+	o.Expect(err).NotTo(o.HaveOccurred())
+
+	modifiedResourceVersion := updatedNP.ResourceVersion
+
+	o.Eventually(func() bool {
+		np, err := kubeClient.NetworkingV1().NetworkPolicies(operatorclient.OperatorNamespace).Get(ctx, networkPolicyName, metav1.GetOptions{})
+		if err != nil {
+			return false
+		}
+		return len(np.Spec.Ingress) == originalIngressRuleCount && np.ResourceVersion != modifiedResourceVersion && np.ResourceVersion != originalResourceVersion
+	}).WithTimeout(1*time.Minute).WithPolling(2*time.Second).Should(o.BeTrue(), "Operator should revert manual changes")
+}
+
 // Ginkgo test specs for OTE framework - calls the shared test functions
 var _ = g.Describe("[sig-scheduling][Operator][Serial] SecondaryScheduler Operator", g.Ordered, func() {
 	var (
@@ -608,6 +879,12 @@ var _ = g.Describe("[sig-scheduling][Operator][Serial] SecondaryScheduler Operat
 			g.DeferCleanup(func() {
 				cleanupTestNamespace(g.GinkgoTB(), ctx, kubeClient, testNamespace)
 			})
+		})
+	})
+
+	g.Describe("NetworkPolicy", g.Ordered, func() {
+		g.It("should have NetworkPolicy for operand configured", func() {
+			testNetworkPolicyForOperand(g.GinkgoTB(), ctx, kubeClient)
 		})
 	})
 
