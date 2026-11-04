@@ -57,5 +57,9 @@ func TestExtended(t *testing.T) {
 		t.Run("Metrics data available", func(t *testing.T) {
 			testMetricsDataAvailable(t, ctx, kubeClient, podLabels)
 		})
+
+		t.Run("NetworkPolicy for operand configured", func(t *testing.T) {
+			testNetworkPolicyForOperand(t, ctx, kubeClient)
+		})
 	})
 }
