@@ -321,25 +321,13 @@ func setupOperator(t testing.TB) (context.Context, context.CancelFunc, *k8sclien
 	return ctx, cancelFnc, kubeClient, nil
 }
 
-func testScheduling(t testing.TB, ctx context.Context, kubeClient *k8sclient.Clientset) string {
-	testNamespace := "e2e-test-secondaryschedulerscheduling"
-	ns := &corev1.Namespace{
+// buildSchedulingTestPod builds a pause pod scheduled by the given scheduler.
+func buildSchedulingTestPod(namespace, name, schedulerName string) *corev1.Pod {
+	return &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: testNamespace,
-		},
-	}
-
-	klog.Infof("Creating test namespace")
-	_, err := kubeClient.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
-	if err != nil {
-		t.Fatalf("Failed to create test namespace: %v", err)
-	}
-
-	pod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testNamespace,
-			Name:      "test-secondary-scheduler-scheduling-pod",
-			Labels:    map[string]string{"app": "test-secondary-scheduler-scheduling"},
+			Namespace: namespace,
+			Name:      name,
+			Labels:    map[string]string{"app": name},
 		},
 		Spec: corev1.PodSpec{
 			SecurityContext: &corev1.PodSecurityContext{
@@ -348,7 +336,7 @@ func testScheduling(t testing.TB, ctx context.Context, kubeClient *k8sclient.Cli
 					Type: corev1.SeccompProfileTypeRuntimeDefault,
 				},
 			},
-			SchedulerName: "secondary-scheduler",
+			SchedulerName: schedulerName,
 			Containers: []corev1.Container{{
 				SecurityContext: &corev1.SecurityContext{
 					AllowPrivilegeEscalation: utilpointer.BoolPtr(false),
@@ -365,13 +353,13 @@ func testScheduling(t testing.TB, ctx context.Context, kubeClient *k8sclient.Cli
 			}},
 		},
 	}
-	if _, err := kubeClient.CoreV1().Pods(pod.Namespace).Create(ctx, pod, metav1.CreateOptions{}); err != nil {
-		t.Fatalf("Unable to create a pod: %v", err)
-	}
+}
 
+// waitForPodScheduled waits until the pod is assigned to a node by its scheduler.
+func waitForPodScheduled(t testing.TB, ctx context.Context, kubeClient *k8sclient.Clientset, namespace, podName string) {
 	o.Eventually(func() bool {
 		klog.Infof("Listing pods...")
-		pod, err := kubeClient.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
+		pod, err := kubeClient.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 		if err != nil {
 			klog.Errorf("Unable to get pod: %v", err)
 			return false
@@ -383,7 +371,68 @@ func testScheduling(t testing.TB, ctx context.Context, kubeClient *k8sclient.Cli
 		klog.Infof("Pod successfully assigned to a node: %v", pod.Spec.NodeName)
 
 		return true
-	}, 2*time.Minute, 1*time.Second).Should(o.BeTrue(), "pod not running after timeout")
+	}, 2*time.Minute, 1*time.Second).Should(o.BeTrue(), "pod not scheduled after timeout")
+}
+
+func testScheduling(t testing.TB, ctx context.Context, kubeClient *k8sclient.Clientset) string {
+	testNamespace := "e2e-test-secondaryschedulerscheduling"
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testNamespace,
+		},
+	}
+
+	klog.Infof("Creating test namespace")
+	_, err := kubeClient.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	if err != nil {
+		t.Fatalf("Failed to create test namespace: %v", err)
+	}
+
+	// Verify that pods are scheduled by the expected scheduler:
+	tests := []struct {
+		name              string
+		podName           string
+		schedulerName     string // empty means the schedulerName field is omitted
+		expectedScheduler string
+	}{
+		{
+			name:              "pod scheduled via secondary-scheduler",
+			podName:           "test-secondary-scheduler-scheduling-pod",
+			schedulerName:     "secondary-scheduler",
+			expectedScheduler: "secondary-scheduler",
+		},
+		{
+			name:              "pod scheduled via default-scheduler",
+			podName:           "test-default-scheduler-scheduling-pod",
+			schedulerName:     "default-scheduler",
+			expectedScheduler: "default-scheduler",
+		},
+		{
+			name:              "pod without schedulerName defaults to default-scheduler",
+			podName:           "test-default-scheduler-implicit-pod",
+			schedulerName:     "",
+			expectedScheduler: "default-scheduler",
+		},
+	}
+
+	for _, test := range tests {
+		klog.Infof("Creating pod %s (schedulerName=%q)", test.podName, test.schedulerName)
+		pod := buildSchedulingTestPod(testNamespace, test.podName, test.schedulerName)
+		if _, err := kubeClient.CoreV1().Pods(pod.Namespace).Create(ctx, pod, metav1.CreateOptions{}); err != nil {
+			t.Fatalf("Unable to create a pod: %v", err)
+		}
+
+		waitForPodScheduled(t, ctx, kubeClient, pod.Namespace, pod.Name)
+
+		scheduledPod, err := kubeClient.CoreV1().Pods(pod.Namespace).Get(ctx, pod.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Fatalf("Unable to get pod %s: %v", pod.Name, err)
+		}
+		if scheduledPod.Spec.SchedulerName != test.expectedScheduler {
+			t.Fatalf("Pod %s: expected schedulerName %q, got %q", pod.Name, test.expectedScheduler, scheduledPod.Spec.SchedulerName)
+		}
+		klog.Infof("Pod %s scheduled by %s on node %s", pod.Name, scheduledPod.Spec.SchedulerName, scheduledPod.Spec.NodeName)
+	}
 
 	return testNamespace
 }
@@ -874,7 +923,7 @@ var _ = g.Describe("[sig-scheduling][Operator][Serial] SecondaryScheduler Operat
 	})
 
 	g.Context("when secondary scheduler is deployed", func() {
-		g.It("should schedule a pod using the secondary scheduler", func() {
+		g.It("should schedule pods using the secondary and default schedulers", func() {
 			testNamespace = testScheduling(g.GinkgoTB(), ctx, kubeClient)
 			g.DeferCleanup(func() {
 				cleanupTestNamespace(g.GinkgoTB(), ctx, kubeClient, testNamespace)

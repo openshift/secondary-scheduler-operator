@@ -20,7 +20,7 @@ func TestExtended(t *testing.T) {
 		}
 		defer cancelFnc()
 
-		t.Run("Scheduling a pod", func(t *testing.T) {
+		t.Run("Scheduling pods via secondary and default schedulers", func(t *testing.T) {
 			testNamespace := testScheduling(g.GinkgoTB(), ctx, kubeClient)
 			defer cleanupTestNamespace(t, ctx, kubeClient, testNamespace)
 		})
