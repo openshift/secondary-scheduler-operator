@@ -23,7 +23,7 @@ import (
 // Interface provides access to all the informers in this group version.
 type Interface interface {
 	// SecondarySchedulers returns a SecondarySchedulerInformer.
-	SecondarySchedulers() SecondarySchedulerInformer
+	SecondarySchedulers() TypedSecondarySchedulerInformer
 }
 
 type version struct {
@@ -37,7 +37,7 @@ func New(f internalinterfaces.SharedInformerFactory, namespace string, tweakList
 	return &version{factory: f, namespace: namespace, tweakListOptions: tweakListOptions}
 }
 
-// SecondarySchedulers returns a SecondarySchedulerInformer.
-func (v *version) SecondarySchedulers() SecondarySchedulerInformer {
+// SecondarySchedulers returns a TypedSecondarySchedulerInformer.
+func (v *version) SecondarySchedulers() TypedSecondarySchedulerInformer {
 	return &secondarySchedulerInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }

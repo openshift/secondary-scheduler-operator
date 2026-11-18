@@ -32,11 +32,39 @@ import (
 )
 
 // SecondarySchedulerInformer provides access to a shared informer and lister for
-// SecondarySchedulers.
+// SecondarySchedulers. Prefer using the type-safe variant (see [TypedSecondarySchedulerInformer]).
 type SecondarySchedulerInformer interface {
 	Informer() cache.SharedIndexInformer
 	Lister() secondaryschedulerv1.SecondarySchedulerLister
 }
+
+// TypedSecondarySchedulerInformer provides access to a shared informer and lister for
+// SecondarySchedulers, including the type-safe TypedInformer variant.
+// It is a superset of SecondarySchedulerInformer.
+type TypedSecondarySchedulerInformer interface {
+	Informer() cache.SharedIndexInformer
+	TypedInformer() SecondarySchedulerIndexInformer
+	Lister() secondaryschedulerv1.SecondarySchedulerLister
+}
+
+// SecondarySchedulerIndexInformer is a wrapper around the underlying [cache.SharedIndexInformer]
+// with type-safe variants of several methods.
+type SecondarySchedulerIndexInformer cache.TypedSharedIndexInformer[*apissecondaryschedulerv1.SecondaryScheduler]
+
+// SecondarySchedulerHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerFuncs] for SecondaryScheduler.
+type SecondarySchedulerHandlerFuncs = cache.TypedResourceEventHandlerFuncs[*apissecondaryschedulerv1.SecondaryScheduler]
+
+// SecondarySchedulerDetailedHandlerFuncs is a specialization of [cache.TypedResourceEventHandlerDetailedFuncs] for SecondaryScheduler.
+type SecondarySchedulerDetailedHandlerFuncs = cache.TypedResourceEventHandlerDetailedFuncs[*apissecondaryschedulerv1.SecondaryScheduler]
+
+// SecondarySchedulerFilteringHandler is a specialization of [cache.TypedFilteringResourceEventHandler] for SecondaryScheduler.
+type SecondarySchedulerFilteringHandler = cache.TypedFilteringResourceEventHandler[*apissecondaryschedulerv1.SecondaryScheduler]
+
+// SecondarySchedulerIndexers is a specialization of [cache.TypedIndexers] for SecondaryScheduler.
+type SecondarySchedulerIndexers = cache.TypedIndexers[*apissecondaryschedulerv1.SecondaryScheduler]
+
+// DeletedSecondaryScheduler is a specialization of [cache.DeletedObject] for SecondaryScheduler.
+type DeletedSecondaryScheduler = cache.DeletedObject[*apissecondaryschedulerv1.SecondaryScheduler]
 
 type secondarySchedulerInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
@@ -47,25 +75,49 @@ type secondarySchedulerInformer struct {
 // NewSecondarySchedulerInformer constructs a new informer for SecondaryScheduler type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedSecondarySchedulerInformer]).
 func NewSecondarySchedulerInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
 	return NewSecondarySchedulerInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers})
+}
+
+// NewTypedSecondarySchedulerInformer constructs a new informer for SecondaryScheduler type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedSecondarySchedulerInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers SecondarySchedulerIndexers) SecondarySchedulerIndexInformer {
+	return NewTypedSecondarySchedulerInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers)})
 }
 
 // NewFilteredSecondarySchedulerInformer constructs a new informer for SecondaryScheduler type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedFilteredSecondarySchedulerInformer]).
 func NewFilteredSecondarySchedulerInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
-	return NewSecondarySchedulerInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+	return NewTypedSecondarySchedulerInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: indexers, TweakListOptions: tweakListOptions})
+}
+
+// NewTypedFilteredSecondarySchedulerInformer constructs a new informer for SecondaryScheduler type.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedFilteredSecondarySchedulerInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers SecondarySchedulerIndexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) SecondarySchedulerIndexInformer {
+	return NewTypedSecondarySchedulerInformerWithOptions(client, namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.TypedIndexersToIndexers(indexers), TweakListOptions: tweakListOptions})
 }
 
 // NewSecondarySchedulerInformerWithOptions constructs a new informer for SecondaryScheduler type with additional options.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
+// If you really need an independent one, prefer using the type-safe variant (see [NewTypedSecondarySchedulerInformerWithOptions]).
 func NewSecondarySchedulerInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) cache.SharedIndexInformer {
+	return NewTypedSecondarySchedulerInformerWithOptions(client, namespace, options)
+}
+
+// NewTypedSecondarySchedulerInformerWithOptions constructs a new informer for SecondaryScheduler type with additional options.
+// Always prefer using an informer factory to get a shared informer instead of getting an independent
+// one. This reduces memory footprint and number of connections to the server.
+func NewTypedSecondarySchedulerInformerWithOptions(client versioned.Interface, namespace string, options internalinterfaces.InformerOptions) SecondarySchedulerIndexInformer {
 	gvr := schema.GroupVersionResource{Group: "operator.openshift.io", Version: "v1", Resource: "secondaryschedulers"}
 	identifier := options.InformerName.WithResource(gvr)
 	tweakListOptions := options.TweakListOptions
-	return cache.NewSharedIndexInformerWithOptions(
+	return cache.NewTypedSharedIndexInformer[*apissecondaryschedulerv1.SecondaryScheduler](cache.NewSharedIndexInformerWithOptions(
 		cache.ToListWatcherWithWatchListSemantics(&cache.ListWatch{
 			ListFunc: func(opts metav1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
@@ -98,17 +150,57 @@ func NewSecondarySchedulerInformerWithOptions(client versioned.Interface, namesp
 			Indexers:     options.Indexers,
 			Identifier:   identifier,
 		},
-	)
+	))
 }
 
 func (f *secondarySchedulerInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewSecondarySchedulerInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
+	return NewTypedSecondarySchedulerInformerWithOptions(client, f.namespace, internalinterfaces.InformerOptions{ResyncPeriod: resyncPeriod, Indexers: cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, InformerName: f.factory.InformerName(), TweakListOptions: f.tweakListOptions})
 }
 
 func (f *secondarySchedulerInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&apissecondaryschedulerv1.SecondaryScheduler{}, f.defaultInformer)
+	return f.TypedInformer()
+}
+
+func (f *secondarySchedulerInformer) TypedInformer() SecondarySchedulerIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apissecondaryschedulerv1.SecondaryScheduler](f.factory.InformerFor(&apissecondaryschedulerv1.SecondaryScheduler{}, f.defaultInformer))
 }
 
 func (f *secondarySchedulerInformer) Lister() secondaryschedulerv1.SecondarySchedulerLister {
 	return secondaryschedulerv1.NewSecondarySchedulerLister(f.Informer().GetIndexer())
+}
+
+// ToTypedSecondarySchedulerInformer converts an untyped informer into a TypedSecondarySchedulerInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *SecondaryScheduler. If that is not the case, calling type-safe methods of the returned
+// TypedSecondarySchedulerInformer leads to runtime panics. A safer alternative is to pass
+// around a TypedSecondarySchedulerInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToTypedSecondarySchedulerInformer(informer SecondarySchedulerInformer) TypedSecondarySchedulerInformer {
+	if informer, ok := informer.(TypedSecondarySchedulerInformer); ok {
+		return informer
+	}
+	return &secondarySchedulerTypedInformerAdapter{informer}
+}
+
+type secondarySchedulerTypedInformerAdapter struct {
+	SecondarySchedulerInformer
+}
+
+func (a *secondarySchedulerTypedInformerAdapter) TypedInformer() SecondarySchedulerIndexInformer {
+	return cache.NewTypedSharedIndexInformer[*apissecondaryschedulerv1.SecondaryScheduler](a.Informer())
+}
+
+// ToSecondarySchedulerIndexInformer converts an untyped informer into a SecondarySchedulerIndexInformer.
+//
+// WARNING: this conversion is only safe if the informer handles objects of type
+// *SecondaryScheduler. If that is not the case, calling type-safe methods of the returned
+// SecondarySchedulerIndexInformer leads to runtime panics. A safer alternative is to pass
+// around a SecondarySchedulerIndexInformer instances that was obtained from a
+// SharedInformerFactory.
+func ToSecondarySchedulerIndexInformer(informer cache.SharedIndexInformer) SecondarySchedulerIndexInformer {
+	if informer, ok := informer.(SecondarySchedulerIndexInformer); ok {
+		return informer
+	}
+	return cache.NewTypedSharedIndexInformer[*apissecondaryschedulerv1.SecondaryScheduler](informer)
 }
