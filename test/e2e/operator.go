@@ -37,7 +37,7 @@ import (
 
 const (
 	// NetworkPolicy test constants
-	agnhostImage         = "registry.k8s.io/e2e-test-images/agnhost:2.66.1"
+	agnhostImage         = "registry.k8s.io/e2e-test-images/agnhost:2.55"
 	metricsPort          = "10259"
 	connectionTimeout    = "5s"
 	monitoringNamespace  = "openshift-monitoring"
