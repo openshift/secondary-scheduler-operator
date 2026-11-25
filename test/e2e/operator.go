@@ -276,8 +276,31 @@ func setupOperator(t testing.TB) (context.Context, context.CancelFunc, *k8sclien
 				if getErr != nil {
 					return getErr
 				}
-				// Update the spec with the required values
-				existingSS.Spec = requiredSS.Spec
+				// Only update the fields this suite owns when they actually differ from the existing CR
+				needsUpdate := false
+				if existingSS.Spec.ManagementState != requiredSS.Spec.ManagementState {
+					existingSS.Spec.ManagementState = requiredSS.Spec.ManagementState
+					needsUpdate = true
+				}
+				if existingSS.Spec.SchedulerConfig != requiredSS.Spec.SchedulerConfig {
+					existingSS.Spec.SchedulerConfig = requiredSS.Spec.SchedulerConfig
+					needsUpdate = true
+				}
+				if existingSS.Spec.SchedulerImage != requiredSS.Spec.SchedulerImage {
+					existingSS.Spec.SchedulerImage = requiredSS.Spec.SchedulerImage
+					needsUpdate = true
+				}
+				//Only reset the topology when a previous (possibly failed) HA test run left it in HighlyAvailable mode
+				topologyAtDefault := (existingSS.Spec.Topology.Mode == "" ||
+					existingSS.Spec.Topology.Mode == secondaryschedulerv1.SingleReplicaMode) &&
+					existingSS.Spec.Topology.HighlyAvailableTopology == nil
+				if !topologyAtDefault {
+					existingSS.Spec.Topology = requiredSS.Spec.Topology
+					needsUpdate = true
+				}
+				if !needsUpdate {
+					return nil
+				}
 				_, err = secondarySchedulerClient.SecondaryschedulersV1().SecondarySchedulers(requiredSS.Namespace).Update(ctx, existingSS, metav1.UpdateOptions{})
 				return err
 			},
