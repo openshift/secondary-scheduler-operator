@@ -30,7 +30,7 @@ import (
 //
 // SecondaryScheduler is the Schema for the secondaryscheduler API
 type SecondarySchedulerApplyConfiguration struct {
-	metav1.TypeMetaApplyConfiguration    `json:",inline"`
+	metav1.TypeMetaApplyConfiguration    `json:""`
 	*metav1.ObjectMetaApplyConfiguration `json:"metadata,omitempty"`
 	// spec holds user settable values for configuration
 	Spec *SecondarySchedulerSpecApplyConfiguration `json:"spec,omitempty"`

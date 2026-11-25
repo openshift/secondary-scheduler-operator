@@ -25,7 +25,7 @@ import (
 //
 // SecondarySchedulerStatus defines the observed state of SecondaryScheduler
 type SecondarySchedulerStatusApplyConfiguration struct {
-	operatorv1.OperatorStatusApplyConfiguration `json:",inline"`
+	operatorv1.OperatorStatusApplyConfiguration `json:""`
 }
 
 // SecondarySchedulerStatusApplyConfiguration constructs a declarative configuration of the SecondarySchedulerStatus type for use with

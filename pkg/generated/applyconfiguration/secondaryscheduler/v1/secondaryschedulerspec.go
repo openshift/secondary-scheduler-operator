@@ -27,7 +27,7 @@ import (
 //
 // SecondarySchedulerSpec defines the desired state of SecondaryScheduler
 type SecondarySchedulerSpecApplyConfiguration struct {
-	operatorv1.OperatorSpecApplyConfiguration `json:",inline"`
+	operatorv1.OperatorSpecApplyConfiguration `json:""`
 	// SchedulerConfig allows configuring the customized scheduler plugin configuration for the secondaryscheduler.
 	SchedulerConfig *string `json:"schedulerConfig,omitempty"`
 	// SchedulerImage sets the container image url to be pulled for the custom scheduler that's deployed
